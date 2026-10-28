@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
-import { Lock, ArrowRight, ShieldCheck, KeyRound, AlertCircle, Sparkles } from 'lucide-react';
+import { Lock, ArrowRight, ShieldCheck, KeyRound, AlertCircle, Sparkles, Eye, EyeOff } from 'lucide-react';
 import { authenticatePortal } from '@/lib/auth';
 
 interface LoginGateProps {
@@ -11,6 +11,7 @@ interface LoginGateProps {
 
 export default function LoginGate({ portal, onSuccess }: LoginGateProps) {
   const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
   const [loading, setLoading] = useState(false);
 
@@ -110,14 +111,36 @@ export default function LoginGate({ portal, onSuccess }: LoginGateProps) {
             </label>
             <div style={{ position: 'relative' }}>
               <input
-                type="password"
+                type={showPassword ? 'text' : 'password'}
                 className="form-input"
                 placeholder="Enter access password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
+                style={{ paddingRight: '44px' }}
                 autoFocus
                 required
               />
+              <button
+                type="button"
+                onClick={() => setShowPassword(!showPassword)}
+                style={{
+                  position: 'absolute',
+                  right: '12px',
+                  top: '50%',
+                  transform: 'translateY(-50%)',
+                  background: 'transparent',
+                  border: 'none',
+                  cursor: 'pointer',
+                  color: 'var(--text-muted)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  padding: '4px'
+                }}
+                title={showPassword ? 'Hide password' : 'Show password'}
+              >
+                {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+              </button>
             </div>
           </div>
 
