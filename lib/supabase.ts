@@ -25,6 +25,54 @@ export async function testSupabaseConnection(): Promise<boolean> {
 }
 
 // ==========================================
+// META CREDENTIALS (Central Cloud Sync)
+// ==========================================
+export async function dbGetCredentials(): Promise<MetaCredentials | null> {
+  try {
+    const { data, error } = await supabase
+      .from('meta_credentials')
+      .select('*')
+      .eq('id', 'default')
+      .single();
+
+    if (error || !data) return null;
+
+    return {
+      phoneNumberId: data.phone_number_id || '',
+      wabaId: data.waba_id || '',
+      accessToken: data.access_token || '',
+      verifyToken: data.verify_token || 'a5a_meta_webhook_secret_2026',
+      status: (data.status as any) || 'disconnected',
+      phoneDetails: data.phone_details || undefined,
+    };
+  } catch (err) {
+    console.warn('[Supabase dbGetCredentials Error]', err);
+    return null;
+  }
+}
+
+export async function dbUpsertCredentials(creds: MetaCredentials): Promise<boolean> {
+  try {
+    const payload = {
+      id: 'default',
+      phone_number_id: creds.phoneNumberId,
+      waba_id: creds.wabaId,
+      access_token: creds.accessToken,
+      verify_token: creds.verifyToken || 'a5a_meta_webhook_secret_2026',
+      status: creds.status,
+      phone_details: creds.phoneDetails || null,
+      updated_at: new Date().toISOString(),
+    };
+
+    const { error } = await supabase.from('meta_credentials').upsert(payload);
+    return !error;
+  } catch (err) {
+    console.warn('[Supabase dbUpsertCredentials Error]', err);
+    return false;
+  }
+}
+
+// ==========================================
 // LEADS
 // ==========================================
 export async function dbGetLeads(): Promise<Lead[]> {

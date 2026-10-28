@@ -76,7 +76,9 @@ import {
   dbDeleteContactGroup, 
   dbGetContacts, 
   dbUpsertContacts, 
-  dbDeleteContact 
+  dbDeleteContact,
+  dbGetCredentials,
+  dbUpsertCredentials
 } from '@/lib/supabase';
 
 export default function DeveloperCampaignHQ() {
@@ -201,6 +203,13 @@ export default function DeveloperCampaignHQ() {
       setContacts(getStoredContacts());
 
       // Fetch cloud records from Supabase
+      dbGetCredentials().then((cloudCreds) => {
+        if (cloudCreds && (cloudCreds.phoneNumberId || cloudCreds.accessToken)) {
+          setCreds(cloudCreds);
+          saveStoredCredentials(cloudCreds);
+        }
+      });
+
       dbGetTemplates().then((cloudTmpls) => {
         if (cloudTmpls && cloudTmpls.length > 0) {
           setTemplates(cloudTmpls);
@@ -250,13 +259,14 @@ export default function DeveloperCampaignHQ() {
     return matches.sort((a, b) => parseInt(a, 10) - parseInt(b, 10));
   }, [headerText, bodyText, headerType]);
 
-  // Handle Save Credentials
-  const handleSaveCredentials = (e: React.FormEvent) => {
+  // Handle Save Credentials (saves to local cache & Supabase cloud)
+  const handleSaveCredentials = async (e: React.FormEvent) => {
     e.preventDefault();
     saveStoredCredentials(creds);
+    await dbUpsertCredentials(creds);
     setTestResult({
       success: true,
-      message: 'Credentials saved locally! Click "Test Connection" to ping Meta API.',
+      message: '✅ Credentials saved to cloud database and synced across all devices! Click "Test Connection" to ping Meta API.',
     });
   };
 
@@ -282,6 +292,7 @@ export default function DeveloperCampaignHQ() {
 
     setCreds(updatedCreds);
     saveStoredCredentials(updatedCreds);
+    await dbUpsertCredentials(updatedCreds);
     setTestingCreds(false);
   };
 
