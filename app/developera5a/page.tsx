@@ -65,7 +65,7 @@ import {
   saveStoredContacts 
 } from '@/lib/storage';
 import { testMetaConnection, submitTemplateToMeta, sendWhatsAppTemplateMessage } from '@/lib/meta-client';
-import { isPortalAuthenticated, logoutPortal } from '@/lib/auth';
+import { isPortalAuthenticated, logoutPortal, useInactivityTracker } from '@/lib/auth';
 import { 
   dbGetCampaigns, 
   dbUpsertCampaign, 
@@ -82,6 +82,11 @@ import {
 export default function DeveloperCampaignHQ() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [loading, setLoading] = useState(true);
+
+  // 1-Hour Inactivity Auto-Logout Tracker
+  useInactivityTracker('developer', () => {
+    setIsAuthenticated(false);
+  });
   const [activeTab, setActiveTab] = useState<'campaigns' | 'contacts' | 'templates' | 'resend' | 'credentials'>('campaigns');
   const [isChangePassOpen, setIsChangePassOpen] = useState(false);
 

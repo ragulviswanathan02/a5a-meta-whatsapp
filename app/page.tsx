@@ -44,7 +44,7 @@ import {
   getStoredFormLeads, 
   saveStoredFormLeads 
 } from '@/lib/storage';
-import { isPortalAuthenticated, logoutPortal } from '@/lib/auth';
+import { isPortalAuthenticated, logoutPortal, useInactivityTracker } from '@/lib/auth';
 import { 
   supabase,
   dbGetLeads, 
@@ -58,6 +58,11 @@ import {
 export default function LeadsDashboard() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [loading, setLoading] = useState(true);
+
+  // 1-Hour Inactivity Auto-Logout Tracker
+  useInactivityTracker('leads', () => {
+    setIsAuthenticated(false);
+  });
 
   // Main Tab Navigation
   const [activeMainTab, setActiveMainTab] = useState<'campaign_leads' | 'form_leads'>('campaign_leads');
