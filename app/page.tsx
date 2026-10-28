@@ -356,32 +356,42 @@ export default function LeadsDashboard() {
 
         {/* Top-Level Tabs: WhatsApp Broadcast Leads vs. Student Form Leads */}
         <div style={{
-          display: 'flex',
-          gap: '12px',
-          borderBottom: '2px solid var(--border-subtle)',
-          marginBottom: '26px'
+          display: 'inline-flex',
+          background: '#f1f5f9',
+          padding: '5px',
+          borderRadius: '16px',
+          border: '1px solid var(--border-subtle)',
+          marginBottom: '26px',
+          gap: '6px'
         }}>
           <button
             onClick={() => setActiveMainTab('campaign_leads')}
             style={{
-              padding: '14px 24px',
+              padding: '10px 20px',
               border: 'none',
-              background: 'transparent',
-              fontWeight: 800,
-              fontSize: '1rem',
+              borderRadius: '12px',
+              background: activeMainTab === 'campaign_leads' ? '#ffffff' : 'transparent',
+              fontWeight: 700,
+              fontSize: '0.92rem',
               cursor: 'pointer',
               display: 'flex',
               alignItems: 'center',
-              gap: '10px',
-              color: activeMainTab === 'campaign_leads' ? 'var(--wa-green)' : 'var(--text-muted)',
-              borderBottom: activeMainTab === 'campaign_leads' ? '3px solid var(--wa-green)' : '3px solid transparent',
-              marginBottom: '-2px',
+              gap: '8px',
+              color: activeMainTab === 'campaign_leads' ? 'var(--wa-green-dark)' : 'var(--text-muted)',
+              boxShadow: activeMainTab === 'campaign_leads' ? '0 2px 8px rgba(0, 0, 0, 0.06)' : 'none',
               transition: 'all 0.2s ease',
             }}
           >
-            <MessageSquare size={19} />
+            <MessageSquare size={17} />
             <span>WhatsApp Campaign Leads</span>
-            <span className="badge badge-green" style={{ fontSize: '0.72rem', padding: '3px 8px' }}>
+            <span style={{
+              fontSize: '0.72rem',
+              fontWeight: 800,
+              background: activeMainTab === 'campaign_leads' ? 'var(--wa-light)' : '#e2e8f0',
+              color: activeMainTab === 'campaign_leads' ? 'var(--wa-green-dark)' : 'var(--text-muted)',
+              padding: '2px 8px',
+              borderRadius: '999px',
+            }}>
               {leads.length}
             </span>
           </button>
@@ -389,24 +399,31 @@ export default function LeadsDashboard() {
           <button
             onClick={() => setActiveMainTab('form_leads')}
             style={{
-              padding: '14px 24px',
+              padding: '10px 20px',
               border: 'none',
-              background: 'transparent',
-              fontWeight: 800,
-              fontSize: '1rem',
+              borderRadius: '12px',
+              background: activeMainTab === 'form_leads' ? '#ffffff' : 'transparent',
+              fontWeight: 700,
+              fontSize: '0.92rem',
               cursor: 'pointer',
               display: 'flex',
               alignItems: 'center',
-              gap: '10px',
-              color: activeMainTab === 'form_leads' ? 'var(--wa-green)' : 'var(--text-muted)',
-              borderBottom: activeMainTab === 'form_leads' ? '3px solid var(--wa-green)' : '3px solid transparent',
-              marginBottom: '-2px',
+              gap: '8px',
+              color: activeMainTab === 'form_leads' ? '#6d28d9' : 'var(--text-muted)',
+              boxShadow: activeMainTab === 'form_leads' ? '0 2px 8px rgba(0, 0, 0, 0.06)' : 'none',
               transition: 'all 0.2s ease',
             }}
           >
-            <GraduationCap size={20} />
+            <GraduationCap size={18} />
             <span>Student Form Leads</span>
-            <span className="badge badge-purple" style={{ fontSize: '0.72rem', padding: '3px 8px' }}>
+            <span style={{
+              fontSize: '0.72rem',
+              fontWeight: 800,
+              background: activeMainTab === 'form_leads' ? '#faf5ff' : '#e2e8f0',
+              color: activeMainTab === 'form_leads' ? '#6d28d9' : 'var(--text-muted)',
+              padding: '2px 8px',
+              borderRadius: '999px',
+            }}>
               {formLeads.length}
             </span>
           </button>
