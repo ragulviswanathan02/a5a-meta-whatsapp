@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react';
 import { KeyRound, Check, X, ShieldAlert, Eye, EyeOff } from 'lucide-react';
-import { getStoredPassword, setStoredPassword } from '@/lib/auth';
+import { getStoredPassword, setStoredPassword, fetchCloudPassword } from '@/lib/auth';
 
 interface ChangePasswordModalProps {
   portal: 'leads' | 'developer';
@@ -26,15 +26,18 @@ export default function ChangePasswordModal({
 
   const portalName = portal === 'leads' ? 'Company Leads Portal' : 'Developer & Campaign HQ';
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setErrorMsg('');
     setSuccessMsg('');
 
-    const actualCurrent = getStoredPassword(portal);
+    let actualCurrent = getStoredPassword(portal);
     if (currentPass !== actualCurrent) {
-      setErrorMsg('Current password is incorrect. Please try again.');
-      return;
+      const cloudCurrent = await fetchCloudPassword(portal);
+      if (currentPass !== cloudCurrent) {
+        setErrorMsg('Current password is incorrect. Please try again.');
+        return;
+      }
     }
 
     if (newPass.length < 6) {
@@ -47,8 +50,8 @@ export default function ChangePasswordModal({
       return;
     }
 
-    setStoredPassword(portal, newPass);
-    setSuccessMsg('Password updated successfully! Keep it safe.');
+    await setStoredPassword(portal, newPass);
+    setSuccessMsg('Password updated across all devices successfully!');
     setCurrentPass('');
     setNewPass('');
     setConfirmPass('');

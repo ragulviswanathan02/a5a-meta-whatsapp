@@ -19,20 +19,30 @@ export default function LoginGate({ portal, onSuccess }: LoginGateProps) {
   const portalTitle = isLeads ? 'Leads Command Center' : 'Meta Campaign & Dev HQ';
   const defaultPassHint = isLeads ? 'a5aleads123' : 'a5adeveloper123';
 
-  const handleLogin = (e: React.FormEvent) => {
+  // Prefetch latest cloud password on gate mount
+  React.useEffect(() => {
+    import('@/lib/auth').then(({ fetchCloudPassword }) => {
+      fetchCloudPassword(portal);
+    });
+  }, [portal]);
+
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setErrorMsg('');
     setLoading(true);
 
-    setTimeout(() => {
-      const isValid = authenticatePortal(portal, password);
+    try {
+      const isValid = await authenticatePortal(portal, password);
       if (isValid) {
         onSuccess();
       } else {
         setErrorMsg('Invalid password. Please check your credentials or use the initial passkey.');
         setLoading(false);
       }
-    }, 400);
+    } catch {
+      setErrorMsg('Authentication error. Please try again.');
+      setLoading(false);
+    }
   };
 
   return (

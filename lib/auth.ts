@@ -1,6 +1,5 @@
-'use client';
-
 import { useEffect } from 'react';
+import { supabase } from './supabase';
 
 const LEADS_PASS_KEY = 'a5a_leads_pwd';
 const DEV_PASS_KEY = 'a5a_dev_pwd';
@@ -15,6 +14,75 @@ export const INACTIVITY_TIMEOUT_MS = 60 * 60 * 1000;
 const DEFAULT_LEADS_PASS = 'a5aleads123';
 const DEFAULT_DEV_PASS = 'a5adeveloper123';
 
+// Fetch password centrally from Supabase cloud (for cross-device synchronization)
+export async function fetchCloudPassword(portal: 'leads' | 'developer'): Promise<string> {
+  try {
+    const { data, error } = await supabase
+      .from('meta_credentials')
+      .select('phone_details')
+      .eq('id', 'auth_passwords')
+      .single();
+
+    if (!error && data?.phone_details) {
+      const cloudPass = portal === 'leads' 
+        ? data.phone_details.leads_pwd 
+        : data.phone_details.dev_pwd;
+
+      if (cloudPass) {
+        // Cache to local storage
+        const key = portal === 'leads' ? LEADS_PASS_KEY : DEV_PASS_KEY;
+        if (typeof window !== 'undefined') {
+          localStorage.setItem(key, cloudPass);
+        }
+        return cloudPass;
+      }
+    }
+  } catch (err) {
+    console.warn('[fetchCloudPassword error]', err);
+  }
+
+  return getStoredPassword(portal);
+}
+
+// Update password in both LocalStorage and Supabase cloud database
+export async function setStoredPassword(portal: 'leads' | 'developer', newPass: string): Promise<boolean> {
+  if (typeof window === 'undefined') return false;
+  const key = portal === 'leads' ? LEADS_PASS_KEY : DEV_PASS_KEY;
+  localStorage.setItem(key, newPass);
+
+  try {
+    // 1. Fetch current cloud passwords row
+    const { data } = await supabase
+      .from('meta_credentials')
+      .select('phone_details')
+      .eq('id', 'auth_passwords')
+      .single();
+
+    const currentDetails = data?.phone_details || {
+      leads_pwd: DEFAULT_LEADS_PASS,
+      dev_pwd: DEFAULT_DEV_PASS,
+    };
+
+    if (portal === 'leads') {
+      currentDetails.leads_pwd = newPass;
+    } else {
+      currentDetails.dev_pwd = newPass;
+    }
+
+    // 2. Persist back to Supabase
+    await supabase.from('meta_credentials').upsert({
+      id: 'auth_passwords',
+      phone_details: currentDetails,
+      updated_at: new Date().toISOString(),
+    });
+
+    return true;
+  } catch (err) {
+    console.warn('[setStoredPassword cloud sync error]', err);
+    return true;
+  }
+}
+
 export function getStoredPassword(portal: 'leads' | 'developer'): string {
   if (typeof window === 'undefined') {
     return portal === 'leads' ? DEFAULT_LEADS_PASS : DEFAULT_DEV_PASS;
@@ -27,13 +95,6 @@ export function getStoredPassword(portal: 'leads' | 'developer'): string {
     return defaultVal;
   }
   return stored;
-}
-
-export function setStoredPassword(portal: 'leads' | 'developer', newPass: string): boolean {
-  if (typeof window === 'undefined') return false;
-  const key = portal === 'leads' ? LEADS_PASS_KEY : DEV_PASS_KEY;
-  localStorage.setItem(key, newPass);
-  return true;
 }
 
 export function recordPortalActivity(portal: 'leads' | 'developer'): void {
@@ -65,15 +126,28 @@ export function isPortalAuthenticated(portal: 'leads' | 'developer'): boolean {
   return true;
 }
 
-export function authenticatePortal(portal: 'leads' | 'developer', pass: string): boolean {
+// Authenticate with instant local check + cloud verification fallback
+export async function authenticatePortal(portal: 'leads' | 'developer', pass: string): Promise<boolean> {
   if (typeof window === 'undefined') return false;
-  const expected = getStoredPassword(portal);
-  if (pass === expected) {
+
+  // 1. Instant check against local storage
+  const localExpected = getStoredPassword(portal);
+  if (pass === localExpected) {
     const sessionKey = portal === 'leads' ? LEADS_AUTH_SESSION : DEV_AUTH_SESSION;
     localStorage.setItem(sessionKey, 'true');
     recordPortalActivity(portal);
     return true;
   }
+
+  // 2. Fetch latest password from Supabase cloud (cross-device sync)
+  const cloudExpected = await fetchCloudPassword(portal);
+  if (pass === cloudExpected) {
+    const sessionKey = portal === 'leads' ? LEADS_AUTH_SESSION : DEV_AUTH_SESSION;
+    localStorage.setItem(sessionKey, 'true');
+    recordPortalActivity(portal);
+    return true;
+  }
+
   return false;
 }
 
