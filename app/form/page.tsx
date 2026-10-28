@@ -213,7 +213,7 @@ function LeadCaptureFormContent() {
 
           {/* Direct WhatsApp Call to Action */}
           <a
-            href={`https://wa.me/?text=Hi%20A5A%20Automation%2C%20I%20am%20${encodeURIComponent(formData.name)}%20from%20${encodeURIComponent(formData.collegeName)}.%20I%20just%20filled%20the%20application%20form%20for%20Industrial%20Automation%20training%20and%20wanted%20to%20connect!`}
+            href={`https://wa.me/917358289166?text=Hi%20A5A%20Automation%2C%20I%20am%20${encodeURIComponent(formData.name)}%20from%20${encodeURIComponent(formData.collegeName)}.%20I%20just%20filled%20the%20application%20form%20for%20Industrial%20Automation%20training%20and%20wanted%20to%20connect!`}
             target="_blank"
             rel="noopener noreferrer"
             className="btn btn-primary"
@@ -232,7 +232,7 @@ function LeadCaptureFormContent() {
             }}
           >
             <MessageCircle size={20} />
-            Chat with A5A Team on WhatsApp Now
+            Chat with A5A Team on WhatsApp (+91 73582 89166)
           </a>
 
           <div style={{ marginTop: '20px' }}>

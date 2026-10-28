@@ -46,6 +46,7 @@ import {
 } from '@/lib/storage';
 import { isPortalAuthenticated, logoutPortal } from '@/lib/auth';
 import { 
+  supabase,
   dbGetLeads, 
   dbUpsertLead, 
   dbDeleteLead,
@@ -80,29 +81,76 @@ export default function LeadsDashboard() {
   const [formStatusFilter, setFormStatusFilter] = useState('all');
   const [copiedLink, setCopiedLink] = useState(false);
 
+  // Silent Auto-Load Functions (no UI flickering)
+  const loadLeadsSilently = async () => {
+    try {
+      const cloudLeads = await dbGetLeads();
+      if (cloudLeads && Array.isArray(cloudLeads)) {
+        setLeads(cloudLeads);
+        saveStoredLeads(cloudLeads);
+      }
+    } catch (err) {
+      // quiet fallback
+    }
+  };
+
+  const loadFormLeadsSilently = async () => {
+    try {
+      const cloudFormLeads = await dbGetFormLeads();
+      if (cloudFormLeads && Array.isArray(cloudFormLeads)) {
+        setFormLeads(cloudFormLeads);
+        saveStoredFormLeads(cloudFormLeads);
+      }
+    } catch (err) {
+      // quiet fallback
+    }
+  };
+
   useEffect(() => {
     const authed = isPortalAuthenticated('leads');
     setIsAuthenticated(authed);
-    if (authed) {
-      // 1. WhatsApp Leads
-      setLeads(getStoredLeads());
-      dbGetLeads().then((cloudLeads) => {
-        if (cloudLeads && cloudLeads.length > 0) {
-          setLeads(cloudLeads);
-          saveStoredLeads(cloudLeads);
-        }
-      });
 
-      // 2. Student Form Leads
+    if (authed) {
+      // 1. Initial Load from Local Cache & Cloud
+      setLeads(getStoredLeads());
       setFormLeads(getStoredFormLeads());
-      dbGetFormLeads().then((cloudFormLeads) => {
-        if (cloudFormLeads && cloudFormLeads.length > 0) {
-          setFormLeads(cloudFormLeads);
-          saveStoredFormLeads(cloudFormLeads);
-        }
-      });
+      loadLeadsSilently();
+      loadFormLeadsSilently();
+
+      // 2. Realtime WebSocket Subscription via Supabase
+      const channel = supabase
+        .channel('realtime_leads_and_forms')
+        .on(
+          'postgres_changes',
+          { event: '*', schema: 'public', table: 'leads' },
+          () => {
+            loadLeadsSilently();
+          }
+        )
+        .on(
+          'postgres_changes',
+          { event: '*', schema: 'public', table: 'form_leads' },
+          () => {
+            loadFormLeadsSilently();
+          }
+        )
+        .subscribe();
+
+      // 3. Fallback Auto-Polling (checks every 4 seconds for instant updates without page refresh)
+      const pollTimer = setInterval(() => {
+        loadLeadsSilently();
+        loadFormLeadsSilently();
+      }, 4000);
+
+      setLoading(false);
+
+      return () => {
+        supabase.removeChannel(channel);
+        clearInterval(pollTimer);
+      };
+    } else {
+      setLoading(false);
     }
-    setLoading(false);
   }, []);
 
   const campaigns = useMemo(() => {
