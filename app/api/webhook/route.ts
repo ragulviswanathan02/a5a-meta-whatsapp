@@ -59,18 +59,54 @@ export async function POST(request: NextRequest) {
         textReply = message.text?.body || '';
       }
 
-      console.log(`[Meta Lead Ingested] From: ${contactName} (${fromPhone}) | Button: ${buttonClicked} | Text: ${textReply}`);
+      const newLeadId = `lead-${Date.now()}`;
+      const newLeadData = {
+        id: newLeadId,
+        phone: fromPhone,
+        name: contactName,
+        campaignId: 'meta-webhook',
+        campaignName: 'WhatsApp Inbound Response',
+        buttonClicked: buttonClicked || undefined,
+        replyMessage: textReply || undefined,
+        status: 'new' as const,
+        priority: 'hot' as const,
+        dealValue: 0,
+        tags: ['Inbound Webhook', buttonClicked ? 'Button Clicked' : 'Direct Message'],
+        notes: [
+          {
+            id: `n-${Date.now()}`,
+            author: 'Meta Cloud API',
+            text: buttonClicked
+              ? `Customer clicked interactive button: "${buttonClicked}"`
+              : `Customer sent WhatsApp text: "${textReply}"`,
+            createdAt: new Date().toISOString(),
+          },
+        ],
+        timeline: [
+          {
+            id: `tl-${Date.now()}`,
+            type: buttonClicked ? ('button_clicked' as const) : ('message_received' as const),
+            content: buttonClicked ? `Tapped Button: "${buttonClicked}"` : `Received: "${textReply}"`,
+            timestamp: new Date().toISOString(),
+          },
+        ],
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      };
+
+      // Persist to Supabase Database
+      try {
+        const { dbUpsertLead } = await import('@/lib/supabase');
+        await dbUpsertLead(newLeadData);
+      } catch (dbErr) {
+        console.warn('[Webhook DB write error]', dbErr);
+      }
+
+      console.log(`[Meta Lead Ingested & Saved to DB] From: ${contactName} (${fromPhone})`);
 
       return NextResponse.json({
         status: 'lead_captured',
-        lead: {
-          phone: fromPhone,
-          name: contactName,
-          buttonClicked,
-          textReply,
-          timestamp,
-          messageId,
-        },
+        lead: newLeadData,
       });
     }
 

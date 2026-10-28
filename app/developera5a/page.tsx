@@ -66,6 +66,18 @@ import {
 } from '@/lib/storage';
 import { testMetaConnection, submitTemplateToMeta, sendWhatsAppTemplateMessage } from '@/lib/meta-client';
 import { isPortalAuthenticated, logoutPortal } from '@/lib/auth';
+import { 
+  dbGetCampaigns, 
+  dbUpsertCampaign, 
+  dbGetTemplates, 
+  dbUpsertTemplate, 
+  dbGetContactGroups, 
+  dbUpsertContactGroup, 
+  dbDeleteContactGroup, 
+  dbGetContacts, 
+  dbUpsertContacts, 
+  dbDeleteContact 
+} from '@/lib/supabase';
 
 export default function DeveloperCampaignHQ() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -166,6 +178,8 @@ export default function DeveloperCampaignHQ() {
     setIsAuthenticated(authed);
     if (authed) {
       setCreds(getStoredCredentials());
+      
+      // Load initial local data
       const loadedTemplates = getStoredTemplates();
       setTemplates(loadedTemplates);
       if (loadedTemplates.length > 0 && !selectedTemplateId) {
@@ -180,6 +194,39 @@ export default function DeveloperCampaignHQ() {
         setTargetGroupId(loadedGroups[0].id);
       }
       setContacts(getStoredContacts());
+
+      // Fetch cloud records from Supabase
+      dbGetTemplates().then((cloudTmpls) => {
+        if (cloudTmpls && cloudTmpls.length > 0) {
+          setTemplates(cloudTmpls);
+          saveStoredTemplates(cloudTmpls);
+          if (!selectedTemplateId) setSelectedTemplateId(cloudTmpls[0].id);
+        }
+      });
+
+      dbGetCampaigns().then((cloudCamps) => {
+        if (cloudCamps && cloudCamps.length > 0) {
+          setCampaigns(cloudCamps);
+          saveStoredCampaigns(cloudCamps);
+        }
+      });
+
+      dbGetContactGroups().then((cloudGroups) => {
+        if (cloudGroups && cloudGroups.length > 0) {
+          setGroups(cloudGroups);
+          saveStoredContactGroups(cloudGroups);
+          setSingleGroupId(cloudGroups[0].id);
+          setBulkGroupId(cloudGroups[0].id);
+          setTargetGroupId(cloudGroups[0].id);
+        }
+      });
+
+      dbGetContacts().then((cloudContacts) => {
+        if (cloudContacts && cloudContacts.length > 0) {
+          setContacts(cloudContacts);
+          saveStoredContacts(cloudContacts);
+        }
+      });
     }
     setLoading(false);
   }, []);
@@ -249,6 +296,7 @@ export default function DeveloperCampaignHQ() {
     const nextGroups = [...groups, newGroup];
     setGroups(nextGroups);
     saveStoredContactGroups(nextGroups);
+    dbUpsertContactGroup(newGroup);
     setNewGroupName('');
     setNewGroupDesc('');
     if (!singleGroupId) setSingleGroupId(newGroup.id);
@@ -267,6 +315,7 @@ export default function DeveloperCampaignHQ() {
     const nextGroups = groups.filter((g) => g.id !== groupId);
     setGroups(nextGroups);
     saveStoredContactGroups(nextGroups);
+    dbDeleteContactGroup(groupId);
 
     // Also unassign or remove contacts from this group
     const nextContacts = contacts.filter((c) => c.groupId !== groupId);
@@ -298,6 +347,7 @@ export default function DeveloperCampaignHQ() {
     const nextContacts = [newContact, ...contacts];
     setContacts(nextContacts);
     saveStoredContacts(nextContacts);
+    dbUpsertContacts([newContact]);
 
     // Update group count
     if (assignedGroup) {
@@ -348,6 +398,7 @@ export default function DeveloperCampaignHQ() {
     const nextContacts = [...newContactsList, ...contacts];
     setContacts(nextContacts);
     saveStoredContacts(nextContacts);
+    dbUpsertContacts(newContactsList);
 
     // Update group count
     if (assignedGroup) {
@@ -373,6 +424,7 @@ export default function DeveloperCampaignHQ() {
     const nextContacts = contacts.filter((c) => c.id !== contactId);
     setContacts(nextContacts);
     saveStoredContacts(nextContacts);
+    dbDeleteContact(contactId);
 
     // Update group count
     const updatedGroups = groups.map((g) =>
@@ -497,6 +549,7 @@ export default function DeveloperCampaignHQ() {
     const updatedTemplates = [newTemplate, ...templates];
     setTemplates(updatedTemplates);
     saveStoredTemplates(updatedTemplates);
+    dbUpsertTemplate(newTemplate);
     setTmplName('');
     setTimeout(() => setTemplateStatusToast(''), 4000);
   };
@@ -575,6 +628,7 @@ export default function DeveloperCampaignHQ() {
     const updated = [newCampaign, ...campaigns];
     setCampaigns(updated);
     saveStoredCampaigns(updated);
+    dbUpsertCampaign(newCampaign);
 
     setLaunchingCamp(false);
     setCampFeedback(`🎉 Campaign "${newCampName}" blasted successfully to ${totalCount} recipients!`);

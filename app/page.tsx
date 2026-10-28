@@ -29,6 +29,7 @@ import {
 import { Lead } from '@/lib/types';
 import { getStoredLeads, saveStoredLeads, getStoredCampaigns } from '@/lib/storage';
 import { isPortalAuthenticated, logoutPortal } from '@/lib/auth';
+import { dbGetLeads, dbUpsertLead } from '@/lib/supabase';
 
 export default function LeadsDashboard() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -49,6 +50,14 @@ export default function LeadsDashboard() {
     setIsAuthenticated(authed);
     if (authed) {
       setLeads(getStoredLeads());
+
+      // Fetch live records from Supabase cloud database
+      dbGetLeads().then((cloudLeads) => {
+        if (cloudLeads && cloudLeads.length > 0) {
+          setLeads(cloudLeads);
+          saveStoredLeads(cloudLeads);
+        }
+      });
     }
     setLoading(false);
   }, []);
@@ -62,6 +71,7 @@ export default function LeadsDashboard() {
     setLeads(updatedList);
     saveStoredLeads(updatedList);
     setSelectedLead(updated);
+    dbUpsertLead(updated);
   };
 
   const handleSimulateNewLead = (partial: Partial<Lead>) => {
@@ -107,6 +117,7 @@ export default function LeadsDashboard() {
     setLeads(nextList);
     saveStoredLeads(nextList);
     setSelectedLead(newLead);
+    dbUpsertLead(newLead);
   };
 
   const handleExportCSV = () => {
