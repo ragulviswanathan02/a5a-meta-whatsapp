@@ -70,7 +70,7 @@ export default function LeadsDashboard() {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCampaign, setSelectedCampaign] = useState<string>('all');
   const [statusFilter, setStatusFilter] = useState<string>('all');
-  const [viewMode, setViewMode] = useState<'table' | 'kanban'>('kanban');
+  const [viewMode, setViewMode] = useState<'table' | 'kanban'>('table');
 
   // Student Form Leads States
   const [formLeads, setFormLeads] = useState<FormLead[]>([]);
@@ -499,9 +499,6 @@ export default function LeadsDashboard() {
               </div>
 
               <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
-                <button onClick={() => setIsTesterOpen(true)} className="btn btn-outline" style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                  <Sparkles size={16} /> Simulate Webhook Lead
-                </button>
                 <button onClick={handleExportCSV} className="btn btn-secondary" style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                   <Download size={16} /> Export CSV
                 </button>
@@ -617,18 +614,18 @@ export default function LeadsDashboard() {
 
               <div style={{ display: 'flex', background: 'var(--bg-card)', padding: '3px', borderRadius: 'var(--radius-md)', border: '1px solid var(--border-subtle)' }}>
                 <button
-                  onClick={() => setViewMode('kanban')}
-                  className={`btn btn-sm ${viewMode === 'kanban' ? 'btn-primary' : 'btn-outline'}`}
-                  style={{ border: 'none', borderRadius: '6px' }}
-                >
-                  <LayoutGrid size={15} /> Kanban Pipeline
-                </button>
-                <button
                   onClick={() => setViewMode('table')}
                   className={`btn btn-sm ${viewMode === 'table' ? 'btn-primary' : 'btn-outline'}`}
                   style={{ border: 'none', borderRadius: '6px' }}
                 >
                   <ListFilter size={15} /> Table View
+                </button>
+                <button
+                  onClick={() => setViewMode('kanban')}
+                  className={`btn btn-sm ${viewMode === 'kanban' ? 'btn-primary' : 'btn-outline'}`}
+                  style={{ border: 'none', borderRadius: '6px' }}
+                >
+                  <LayoutGrid size={15} /> Card View
                 </button>
               </div>
             </div>
