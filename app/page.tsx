@@ -149,7 +149,7 @@ export default function LeadsDashboard() {
   const totalLeadsCount = leads.length;
   const hotLeadsCount = leads.filter((l) => l.priority === 'hot' || l.status === 'new').length;
   const convertedCount = leads.filter((l) => l.status === 'converted').length;
-  const totalPipelineValue = leads.reduce((sum, l) => sum + (l.dealValue || 0), 0);
+  const pendingActionCount = leads.filter((l) => l.status === 'new' || l.status === 'contacted').length;
 
   if (loading) {
     return <div style={{ minHeight: '100vh', background: 'var(--bg-primary)' }} />;
@@ -183,7 +183,7 @@ export default function LeadsDashboard() {
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '24px', flexWrap: 'wrap', gap: '16px' }}>
           <div>
             <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-              <h1 style={{ fontSize: '1.75rem', fontWeight: '800', color: '#fff', letterSpacing: '-0.02em' }}>
+              <h1 style={{ fontSize: '1.75rem', fontWeight: '800', color: 'var(--text-main)', letterSpacing: '-0.02em' }}>
                 WhatsApp Leads Command Center
               </h1>
               <span className="badge badge-green">
@@ -220,11 +220,11 @@ export default function LeadsDashboard() {
               <div className="stat-title">Total Inbound Leads</div>
               <div className="stat-value">{totalLeadsCount}</div>
               <div className="stat-sub">
-                <TrendingUp size={14} color="var(--wa-green)" />
-                <span style={{ color: 'var(--wa-green)' }}>+18%</span> from previous week
+                <TrendingUp size={14} color="var(--wa-green-dark)" />
+                <span style={{ color: 'var(--wa-green-dark)', fontWeight: 600 }}>Active Campaign Prospects</span>
               </div>
             </div>
-            <div className="stat-icon" style={{ background: 'rgba(37, 211, 102, 0.15)', color: 'var(--wa-green)' }}>
+            <div className="stat-icon" style={{ background: 'var(--wa-light)', color: 'var(--wa-green-dark)' }}>
               <Users size={24} />
             </div>
           </div>
@@ -232,13 +232,13 @@ export default function LeadsDashboard() {
           <div className="stat-card">
             <div>
               <div className="stat-title">Hot / High Intent Leads</div>
-              <div className="stat-value" style={{ color: '#fda4af' }}>{hotLeadsCount}</div>
+              <div className="stat-value" style={{ color: '#e11d48' }}>{hotLeadsCount}</div>
               <div className="stat-sub">
-                <Flame size={14} color="#f43f5e" />
-                <span>Clicked "Interested" or "Call Back"</span>
+                <Flame size={14} color="#e11d48" />
+                <span>Tapped "Interested" or "Call Back"</span>
               </div>
             </div>
-            <div className="stat-icon" style={{ background: 'rgba(244, 63, 94, 0.15)', color: '#fb7185' }}>
+            <div className="stat-icon" style={{ background: '#fff1f2', color: '#e11d48' }}>
               <Flame size={24} />
             </div>
           </div>
@@ -246,29 +246,28 @@ export default function LeadsDashboard() {
           <div className="stat-card">
             <div>
               <div className="stat-title">Converted / Deals Won</div>
-              <div className="stat-value" style={{ color: '#6ee7b7' }}>{convertedCount}</div>
+              <div className="stat-value" style={{ color: '#059669' }}>{convertedCount}</div>
               <div className="stat-sub">
-                <CheckCircle size={14} color="#10b981" />
+                <CheckCircle size={14} color="#059669" />
                 <span>{totalLeadsCount > 0 ? ((convertedCount / totalLeadsCount) * 100).toFixed(1) : 0}% Conversion Rate</span>
               </div>
             </div>
-            <div className="stat-icon" style={{ background: 'rgba(16, 185, 129, 0.15)', color: '#34d399' }}>
+            <div className="stat-icon" style={{ background: '#ecfdf5', color: '#059669' }}>
               <Trophy size={24} />
             </div>
           </div>
 
           <div className="stat-card">
             <div>
-              <div className="stat-title">Active Pipeline Value</div>
-              <div className="stat-value" style={{ color: '#93c5fd' }}>
-                ₹{(totalPipelineValue / 100000).toFixed(1)}L
-              </div>
+              <div className="stat-title">Pending Action / Follow-up</div>
+              <div className="stat-value" style={{ color: '#2563eb' }}>{pendingActionCount}</div>
               <div className="stat-sub">
-                <span>Total cumulative potential deal value</span>
+                <Clock size={14} color="#2563eb" />
+                <span>Awaiting sales agent reply or call</span>
               </div>
             </div>
-            <div className="stat-icon" style={{ background: 'rgba(59, 130, 246, 0.15)', color: '#60a5fa' }}>
-              <TrendingUp size={24} />
+            <div className="stat-icon" style={{ background: '#eff6ff', color: '#2563eb' }}>
+              <Clock size={24} />
             </div>
           </div>
         </div>
@@ -380,7 +379,7 @@ export default function LeadsDashboard() {
                         >
                           <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '8px' }}>
                             <div>
-                              <h4 style={{ fontSize: '0.96rem', fontWeight: 700, color: '#fff', marginBottom: '2px' }}>
+                              <h4 style={{ fontSize: '0.96rem', fontWeight: 700, color: 'var(--text-main)', marginBottom: '2px' }}>
                                 {lead.name}
                               </h4>
                               <p style={{ fontSize: '0.78rem', color: 'var(--text-muted)', fontFamily: 'monospace' }}>
@@ -389,7 +388,7 @@ export default function LeadsDashboard() {
                             </div>
 
                             {lead.priority === 'hot' && (
-                              <span title="Hot Lead" style={{ color: '#f43f5e' }}>
+                              <span title="Hot Lead" style={{ color: '#e11d48' }}>
                                 <Flame size={17} />
                               </span>
                             )}
@@ -398,12 +397,12 @@ export default function LeadsDashboard() {
                           {/* Button clicked highlight */}
                           {lead.buttonClicked && (
                             <div style={{
-                              background: 'rgba(37, 211, 102, 0.1)',
-                              border: '1px solid rgba(37, 211, 102, 0.25)',
+                              background: 'var(--wa-light)',
+                              border: '1px solid rgba(16, 185, 129, 0.3)',
                               borderRadius: '6px',
                               padding: '5px 8px',
                               fontSize: '0.75rem',
-                              color: 'var(--wa-green)',
+                              color: 'var(--wa-green-dark)',
                               fontWeight: 700,
                               display: 'flex',
                               alignItems: 'center',
@@ -416,12 +415,12 @@ export default function LeadsDashboard() {
 
                           {lead.replyMessage && !lead.buttonClicked && (
                             <div style={{
-                              background: 'rgba(59, 130, 246, 0.08)',
-                              border: '1px solid rgba(59, 130, 246, 0.2)',
+                              background: '#eff6ff',
+                              border: '1px solid #bfdbfe',
                               borderRadius: '6px',
                               padding: '5px 8px',
                               fontSize: '0.75rem',
-                              color: '#93c5fd',
+                              color: '#1d4ed8',
                               fontStyle: 'italic',
                               lineHeight: 1.3
                             }}>
@@ -429,15 +428,13 @@ export default function LeadsDashboard() {
                             </div>
                           )}
 
-                          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', paddingTop: '8px', borderTop: '1px solid rgba(255, 255, 255, 0.05)', fontSize: '0.74rem', color: 'var(--text-dim)' }}>
-                            <span style={{ maxWidth: '140px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={lead.campaignName}>
+                          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', paddingTop: '8px', borderTop: '1px solid var(--border-subtle)', fontSize: '0.74rem', color: 'var(--text-muted)' }}>
+                            <span style={{ maxWidth: '180px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={lead.campaignName}>
                               📢 {lead.campaignName}
                             </span>
-                            {lead.dealValue && (
-                              <span style={{ fontWeight: 700, color: '#38bdf8' }}>
-                                ₹{(lead.dealValue / 1000).toFixed(0)}k
-                              </span>
-                            )}
+                            <span className={`badge ${lead.priority === 'hot' ? 'badge-red' : 'badge-green'}`} style={{ fontSize: '0.68rem' }}>
+                              {lead.priority.toUpperCase()}
+                            </span>
                           </div>
                         </div>
                       ))
@@ -465,7 +462,7 @@ export default function LeadsDashboard() {
                 {filteredLeads.length === 0 ? (
                   <tr>
                     <td colSpan={7} style={{ textAlign: 'center', padding: '40px 0', color: 'var(--text-dim)' }}>
-                      No matching leads found for current filters.
+                      No leads captured yet. Your live campaign button clicks will appear here!
                     </td>
                   </tr>
                 ) : (
@@ -474,7 +471,7 @@ export default function LeadsDashboard() {
                     return (
                       <tr key={lead.id} style={{ cursor: 'pointer' }} onClick={() => setSelectedLead(lead)}>
                         <td>
-                          <div style={{ fontWeight: 700, color: '#fff' }}>{lead.name}</div>
+                          <div style={{ fontWeight: 700, color: 'var(--text-main)' }}>{lead.name}</div>
                           <div style={{ fontSize: '0.78rem', color: 'var(--text-dim)', fontFamily: 'monospace' }}>
                             {lead.phone}
                           </div>

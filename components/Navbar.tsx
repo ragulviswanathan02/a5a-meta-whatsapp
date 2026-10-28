@@ -29,45 +29,51 @@ export default function Navbar({ portal, onOpenChangePassword, onLogout }: Navba
       <div className="container">
         <div className="nav-row">
           <div className="brand-wrapper">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img 
-              src="/logo.jpg" 
-              alt="A5A Logo" 
-              className="brand-logo-img"
-              onError={(e) => {
-                // fallback if image fails to load
-                (e.target as HTMLElement).style.display = 'none';
-              }} 
-            />
+            <div style={{
+              width: '42px',
+              height: '42px',
+              borderRadius: '10px',
+              background: '#ffffff',
+              boxShadow: '0 2px 8px rgba(0, 0, 0, 0.08)',
+              border: '1px solid rgba(0, 0, 0, 0.08)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              padding: '4px',
+              flexShrink: 0
+            }}>
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img 
+                src="/logo.jpg" 
+                alt="A5A Logo" 
+                style={{ width: '100%', height: '100%', objectFit: 'contain' }}
+                onError={(e) => {
+                  (e.target as HTMLElement).style.display = 'none';
+                }} 
+              />
+            </div>
             <div>
               <div className="brand-title">
                 A5A <span style={{ color: 'var(--wa-green)' }}>Meta</span>
-                <span className="brand-badge">Enterprise Cloud API</span>
+                <span className="brand-badge">WhatsApp Cloud API</span>
               </div>
-              <p style={{ fontSize: '0.72rem', color: 'var(--text-dim)', letterSpacing: '0.02em' }}>
-                WhatsApp Campaign Engine & Lead Command Center
+              <p style={{ fontSize: '0.74rem', color: 'var(--text-muted)', letterSpacing: '0.01em' }}>
+                {portal === 'leads' ? 'Inbound Lead Management Portal' : 'Campaign Engine & Meta Developer HQ'}
               </p>
             </div>
           </div>
 
           <div className="nav-links">
-            <Link 
-              href="/" 
-              className={`nav-pill ${pathname === '/' ? 'active' : ''}`}
-            >
-              <Users size={17} />
-              <span>Leads Command Center</span>
-            </Link>
-
-            <Link 
-              href="/developera5a" 
-              className={`nav-pill ${pathname === '/developera5a' ? 'active' : ''}`}
-            >
-              <Send size={17} />
-              <span>Campaign & Meta HQ</span>
-            </Link>
-
-            <div style={{ width: '1px', height: '24px', background: 'var(--border-subtle)', margin: '0 4px' }} />
+            {portal === 'developer' && (
+              <Link 
+                href="/" 
+                className="nav-pill"
+                title="Switch to Leads Portal"
+              >
+                <Users size={17} />
+                <span>View Leads Portal</span>
+              </Link>
+            )}
 
             <button 
               onClick={onOpenChangePassword}

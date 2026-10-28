@@ -43,26 +43,38 @@ export default function LoginGate({ portal, onSuccess }: LoginGateProps) {
       padding: '24px',
       position: 'relative'
     }}>
-      <div className="glass-panel" style={{ width: '100%', maxWidth: '440px', padding: '36px', textAlign: 'center', border: '1px solid rgba(255, 255, 255, 0.1)' }}>
-        <div style={{ display: 'inline-flex', padding: '14px', borderRadius: '18px', background: 'rgba(37, 211, 102, 0.12)', border: '1px solid rgba(37, 211, 102, 0.25)', marginBottom: '20px' }}>
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img 
-            src="/logo.jpg" 
-            alt="A5A Logo" 
-            style={{ width: '56px', height: '56px', borderRadius: '12px', objectFit: 'cover' }}
-            onError={(e) => {
-              (e.target as HTMLElement).style.display = 'none';
-            }}
-          />
-        </div>
+      <div className="glass-panel" style={{ width: '100%', maxWidth: '440px', padding: '36px', textAlign: 'center' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', marginBottom: '20px' }}>
+          <div style={{
+            width: '64px',
+            height: '64px',
+            borderRadius: '16px',
+            background: '#ffffff',
+            boxShadow: '0 4px 14px rgba(0, 0, 0, 0.08)',
+            border: '1px solid rgba(0, 0, 0, 0.06)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: '8px',
+            marginBottom: '12px'
+          }}>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img 
+              src="/logo.jpg" 
+              alt="A5A Logo" 
+              style={{ width: '100%', height: '100%', objectFit: 'contain' }}
+              onError={(e) => {
+                (e.target as HTMLElement).style.display = 'none';
+              }}
+            />
+          </div>
 
-        <div style={{ display: 'inline-block', marginBottom: '8px' }}>
           <span className="badge badge-green">
             <ShieldCheck size={13} /> Secure Access
           </span>
         </div>
 
-        <h1 style={{ fontSize: '1.5rem', fontWeight: '800', color: '#fff', marginBottom: '6px' }}>
+        <h1 style={{ fontSize: '1.5rem', fontWeight: '800', color: 'var(--text-main)', marginBottom: '6px' }}>
           {portalTitle}
         </h1>
         <p style={{ fontSize: '0.84rem', color: 'var(--text-muted)', marginBottom: '28px' }}>
@@ -74,10 +86,10 @@ export default function LoginGate({ portal, onSuccess }: LoginGateProps) {
         {errorMsg && (
           <div style={{
             padding: '10px 14px',
-            background: 'rgba(244, 63, 94, 0.15)',
+            background: 'rgba(244, 63, 94, 0.1)',
             border: '1px solid rgba(244, 63, 94, 0.3)',
             borderRadius: 'var(--radius-md)',
-            color: '#fb7185',
+            color: '#e11d48',
             fontSize: '0.82rem',
             marginBottom: '20px',
             display: 'flex',
@@ -125,30 +137,6 @@ export default function LoginGate({ portal, onSuccess }: LoginGateProps) {
             )}
           </button>
         </form>
-
-        <div style={{
-          marginTop: '28px',
-          padding: '12px 14px',
-          background: 'rgba(255, 255, 255, 0.03)',
-          border: '1px dashed var(--border-subtle)',
-          borderRadius: 'var(--radius-md)',
-          fontSize: '0.76rem',
-          color: 'var(--text-muted)',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between'
-        }}>
-          <span>Default Passkey:</span>
-          <code style={{
-            background: 'rgba(0, 0, 0, 0.4)',
-            padding: '2px 8px',
-            borderRadius: '4px',
-            color: 'var(--wa-green)',
-            fontFamily: 'monospace'
-          }}>
-            {defaultPassHint}
-          </code>
-        </div>
       </div>
     </div>
   );

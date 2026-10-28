@@ -15,25 +15,30 @@ import {
   Radio, 
   Eye, 
   Plus, 
-  Smartphone, 
-  Sparkles, 
-  TrendingUp, 
+  Trash2,
   Users, 
+  FolderPlus,
   ArrowRight, 
-  ExternalLink,
-  RefreshCw,
+  Upload,
+  Download,
+  Filter,
+  Sparkles, 
   Clock,
   Layers,
   ChevronRight,
   Sliders,
-  Flame
+  Flame,
+  Search,
+  Tag
 } from 'lucide-react';
 import { 
   MetaCredentials, 
   WhatsAppTemplate, 
   Campaign, 
   CampaignRecipient, 
-  TemplateComponent 
+  TemplateComponent,
+  ContactGroup,
+  Contact 
 } from '@/lib/types';
 import { 
   getStoredCredentials, 
@@ -41,47 +46,73 @@ import {
   getStoredTemplates, 
   saveStoredTemplates, 
   getStoredCampaigns, 
-  saveStoredCampaigns 
+  saveStoredCampaigns,
+  getStoredContactGroups,
+  saveStoredContactGroups,
+  getStoredContacts,
+  saveStoredContacts 
 } from '@/lib/storage';
-import { testMetaConnection, submitTemplateToMeta, fetchTemplatesFromMeta, sendWhatsAppTemplateMessage } from '@/lib/meta-client';
+import { testMetaConnection, submitTemplateToMeta, sendWhatsAppTemplateMessage } from '@/lib/meta-client';
 import { isPortalAuthenticated, logoutPortal } from '@/lib/auth';
 
 export default function DeveloperCampaignHQ() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState<'credentials' | 'templates' | 'campaigns' | 'resend'>('campaigns');
+  const [activeTab, setActiveTab] = useState<'campaigns' | 'contacts' | 'templates' | 'resend' | 'credentials'>('campaigns');
   const [isChangePassOpen, setIsChangePassOpen] = useState(false);
 
   // Data states
   const [creds, setCreds] = useState<MetaCredentials>(getStoredCredentials());
   const [templates, setTemplates] = useState<WhatsAppTemplate[]>([]);
   const [campaigns, setCampaigns] = useState<Campaign[]>([]);
+  const [groups, setGroups] = useState<ContactGroup[]>([]);
+  const [contacts, setContacts] = useState<Contact[]>([]);
 
   // Credential testing state
   const [testingCreds, setTestingCreds] = useState(false);
   const [testResult, setTestResult] = useState<{ success: boolean; message: string; data?: any } | null>(null);
 
+  // Contact Groups & Import state
+  const [newGroupName, setNewGroupName] = useState('');
+  const [newGroupDesc, setNewGroupDesc] = useState('');
+  const [selectedGroupFilter, setSelectedGroupFilter] = useState('all');
+  const [contactSearchQuery, setContactSearchQuery] = useState('');
+
+  // Single Contact Add form
+  const [singleName, setSingleName] = useState('');
+  const [singlePhone, setSinglePhone] = useState('');
+  const [singleEmail, setSingleEmail] = useState('');
+  const [singleCity, setSingleCity] = useState('');
+  const [singleTag, setSingleTag] = useState('');
+  const [singleGroupId, setSingleGroupId] = useState('');
+
+  // Bulk Import textarea
+  const [bulkCsvText, setBulkCsvText] = useState('');
+  const [bulkGroupId, setBulkGroupId] = useState('');
+  const [contactFeedback, setContactFeedback] = useState('');
+
   // Template Studio state
-  const [tmplName, setTmplName] = useState('exclusive_flash_deal');
+  const [tmplName, setTmplName] = useState('');
   const [tmplCategory, setTmplCategory] = useState<'MARKETING' | 'UTILITY'>('MARKETING');
   const [tmplLanguage, setTmplLanguage] = useState('en_US');
   const [headerType, setHeaderType] = useState<'TEXT' | 'NONE'>('TEXT');
-  const [headerText, setHeaderText] = useState('🔥 Exclusive Flash Access: {{1}}');
-  const [bodyText, setBodyText] = useState('Hi {{1}}, we are releasing 50 spots for {{2}} at an exclusive {{3}}.\n\nTap below to claim or request a callback from our team.');
-  const [footerText, setFooterText] = useState('A5A Meta VIP Desk • Reply STOP to unsubscribe');
+  const [headerText, setHeaderText] = useState('Exclusive Privilege for {{1}}');
+  const [bodyText, setBodyText] = useState('Hello {{1}}, we are pleased to offer you special access to {{2}}.\n\nTap below if you are interested.');
+  const [footerText, setFooterText] = useState('A5A Meta Solutions');
   const [sampleVars, setSampleVars] = useState<Record<string, string>>({
-    '1': 'Customer',
-    '2': 'Meta Growth Accelerator',
-    '3': '50% discount',
+    '1': 'John Doe',
+    '2': 'VIP Launch Package',
   });
   const [btn1Text, setBtn1Text] = useState('🔥 I am Interested');
-  const [btn2Text, setBtn2Text] = useState('📞 Request Callback');
+  const [btn2Text, setBtn2Text] = useState('📞 Request Call Back');
   const [templateStatusToast, setTemplateStatusToast] = useState('');
 
   // New Campaign state
   const [newCampName, setNewCampName] = useState('');
   const [selectedTemplateId, setSelectedTemplateId] = useState('');
-  const [contactListInput, setContactListInput] = useState('+919840123456, Arun Kumar\n+919871234567, Priya Sharma\n+919940567890, Vikram Seth');
+  const [audienceMode, setAudienceMode] = useState<'group' | 'custom'>('custom');
+  const [targetGroupId, setTargetGroupId] = useState('');
+  const [contactListInput, setContactListInput] = useState('');
   const [launchingCamp, setLaunchingCamp] = useState(false);
   const [campFeedback, setCampFeedback] = useState('');
 
@@ -94,13 +125,20 @@ export default function DeveloperCampaignHQ() {
     setIsAuthenticated(authed);
     if (authed) {
       setCreds(getStoredCredentials());
-      setTemplates(getStoredTemplates());
-      const loadedCampaigns = getStoredCampaigns();
-      setCampaigns(loadedCampaigns);
-      if (loadedCampaigns.length > 0 && !selectedTemplateId) {
-        const tmpls = getStoredTemplates();
-        if (tmpls.length > 0) setSelectedTemplateId(tmpls[0].id);
+      const loadedTemplates = getStoredTemplates();
+      setTemplates(loadedTemplates);
+      if (loadedTemplates.length > 0 && !selectedTemplateId) {
+        setSelectedTemplateId(loadedTemplates[0].id);
       }
+      setCampaigns(getStoredCampaigns());
+      const loadedGroups = getStoredContactGroups();
+      setGroups(loadedGroups);
+      if (loadedGroups.length > 0) {
+        setSingleGroupId(loadedGroups[0].id);
+        setBulkGroupId(loadedGroups[0].id);
+        setTargetGroupId(loadedGroups[0].id);
+      }
+      setContacts(getStoredContacts());
     }
     setLoading(false);
   }, []);
@@ -154,9 +192,173 @@ export default function DeveloperCampaignHQ() {
     setTestingCreds(false);
   };
 
+  // Create Contact Group
+  const handleCreateGroup = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newGroupName.trim()) return;
+
+    const newGroup: ContactGroup = {
+      id: `grp-${Date.now()}`,
+      name: newGroupName.trim(),
+      description: newGroupDesc.trim() || undefined,
+      contactCount: 0,
+      createdAt: new Date().toISOString(),
+    };
+
+    const nextGroups = [...groups, newGroup];
+    setGroups(nextGroups);
+    saveStoredContactGroups(nextGroups);
+    setNewGroupName('');
+    setNewGroupDesc('');
+    if (!singleGroupId) setSingleGroupId(newGroup.id);
+    if (!bulkGroupId) setBulkGroupId(newGroup.id);
+    if (!targetGroupId) setTargetGroupId(newGroup.id);
+    setContactFeedback(`Contact Group "${newGroup.name}" created successfully!`);
+    setTimeout(() => setContactFeedback(''), 3000);
+  };
+
+  // Delete Contact Group
+  const handleDeleteGroup = (groupId: string) => {
+    const groupToDelete = groups.find((g) => g.id === groupId);
+    if (!groupToDelete) return;
+    if (!confirm(`Are you sure you want to delete the group "${groupToDelete.name}"?`)) return;
+
+    const nextGroups = groups.filter((g) => g.id !== groupId);
+    setGroups(nextGroups);
+    saveStoredContactGroups(nextGroups);
+
+    // Also unassign or remove contacts from this group
+    const nextContacts = contacts.filter((c) => c.groupId !== groupId);
+    setContacts(nextContacts);
+    saveStoredContacts(nextContacts);
+
+    setContactFeedback(`Deleted group "${groupToDelete.name}".`);
+    setTimeout(() => setContactFeedback(''), 3000);
+  };
+
+  // Add Single Contact
+  const handleAddSingleContact = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!singlePhone.trim()) return;
+
+    const assignedGroup = groups.find((g) => g.id === singleGroupId) || groups[0];
+    const newContact: Contact = {
+      id: `cnt-${Date.now()}`,
+      name: singleName.trim() || 'Valued Customer',
+      phone: singlePhone.trim(),
+      email: singleEmail.trim() || undefined,
+      city: singleCity.trim() || undefined,
+      tags: singleTag ? [singleTag.trim()] : [],
+      groupId: assignedGroup ? assignedGroup.id : 'default',
+      groupName: assignedGroup ? assignedGroup.name : 'General',
+      createdAt: new Date().toISOString(),
+    };
+
+    const nextContacts = [newContact, ...contacts];
+    setContacts(nextContacts);
+    saveStoredContacts(nextContacts);
+
+    // Update group count
+    if (assignedGroup) {
+      const updatedGroups = groups.map((g) =>
+        g.id === assignedGroup.id ? { ...g, contactCount: g.contactCount + 1 } : g
+      );
+      setGroups(updatedGroups);
+      saveStoredContactGroups(updatedGroups);
+    }
+
+    setSingleName('');
+    setSinglePhone('');
+    setSingleEmail('');
+    setSingleCity('');
+    setSingleTag('');
+    setContactFeedback(`Contact added to "${newContact.groupName}"!`);
+    setTimeout(() => setContactFeedback(''), 3000);
+  };
+
+  // Bulk CSV / Multi-line Contact Import
+  const handleBulkImportContacts = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!bulkCsvText.trim()) return;
+
+    const assignedGroup = groups.find((g) => g.id === bulkGroupId) || groups[0];
+    const lines = bulkCsvText.split('\n').filter((l) => l.trim().length > 0);
+    const newContactsList: Contact[] = [];
+
+    lines.forEach((line, idx) => {
+      const parts = line.split(',').map((p) => p.trim());
+      if (parts[0]) {
+        newContactsList.push({
+          id: `cnt-${Date.now()}-${idx}`,
+          phone: parts[0],
+          name: parts[1] || `Customer ${idx + 1}`,
+          email: parts[2] || undefined,
+          city: parts[3] || undefined,
+          tags: parts[4] ? [parts[4]] : [],
+          groupId: assignedGroup ? assignedGroup.id : 'default',
+          groupName: assignedGroup ? assignedGroup.name : 'General',
+          createdAt: new Date().toISOString(),
+        });
+      }
+    });
+
+    if (newContactsList.length === 0) return;
+
+    const nextContacts = [...newContactsList, ...contacts];
+    setContacts(nextContacts);
+    saveStoredContacts(nextContacts);
+
+    // Update group count
+    if (assignedGroup) {
+      const updatedGroups = groups.map((g) =>
+        g.id === assignedGroup.id
+          ? { ...g, contactCount: g.contactCount + newContactsList.length }
+          : g
+      );
+      setGroups(updatedGroups);
+      saveStoredContactGroups(updatedGroups);
+    }
+
+    setBulkCsvText('');
+    setContactFeedback(`Successfully imported ${newContactsList.length} contacts!`);
+    setTimeout(() => setContactFeedback(''), 3500);
+  };
+
+  // Delete Single Contact
+  const handleDeleteContact = (contactId: string) => {
+    const contactToDelete = contacts.find((c) => c.id === contactId);
+    if (!contactToDelete) return;
+
+    const nextContacts = contacts.filter((c) => c.id !== contactId);
+    setContacts(nextContacts);
+    saveStoredContacts(nextContacts);
+
+    // Update group count
+    const updatedGroups = groups.map((g) =>
+      g.id === contactToDelete.groupId
+        ? { ...g, contactCount: Math.max(0, g.contactCount - 1) }
+        : g
+    );
+    setGroups(updatedGroups);
+    saveStoredContactGroups(updatedGroups);
+  };
+
+  // Filtered contacts
+  const filteredContacts = React.useMemo(() => {
+    return contacts.filter((c) => {
+      const matchesGroup = selectedGroupFilter === 'all' || c.groupId === selectedGroupFilter;
+      const matchesSearch =
+        c.name.toLowerCase().includes(contactSearchQuery.toLowerCase()) ||
+        c.phone.includes(contactSearchQuery) ||
+        (c.city && c.city.toLowerCase().includes(contactSearchQuery.toLowerCase()));
+      return matchesGroup && matchesSearch;
+    });
+  }, [contacts, selectedGroupFilter, contactSearchQuery]);
+
   // Submit Template to Meta or Save
   const handleCreateTemplate = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!tmplName.trim()) return;
     const cleanName = tmplName.toLowerCase().replace(/[^a-z0-9_]/g, '_');
 
     // Build components
@@ -212,7 +414,6 @@ export default function DeveloperCampaignHQ() {
       createdAt: new Date().toISOString(),
     };
 
-    // If Meta credentials are provided, attempt real Meta submission
     if (creds.wabaId && creds.accessToken) {
       try {
         setTemplateStatusToast('Submitting template payload to Meta Graph API...');
@@ -225,7 +426,7 @@ export default function DeveloperCampaignHQ() {
         newTemplate.status = 'PENDING';
         setTemplateStatusToast('✅ Submitted to Meta Cloud API! In review.');
       } catch (err: any) {
-        newTemplate.status = 'APPROVED'; // fallback local
+        newTemplate.status = 'APPROVED';
         setTemplateStatusToast(`Saved locally. Meta returned: ${err.message}`);
       }
     } else {
@@ -236,6 +437,7 @@ export default function DeveloperCampaignHQ() {
     const updatedTemplates = [newTemplate, ...templates];
     setTemplates(updatedTemplates);
     saveStoredTemplates(updatedTemplates);
+    setTmplName('');
     setTimeout(() => setTemplateStatusToast(''), 4000);
   };
 
@@ -248,56 +450,61 @@ export default function DeveloperCampaignHQ() {
     setCampFeedback('');
 
     const template = templates.find((t) => t.id === selectedTemplateId) || templates[0];
+    let recipients: CampaignRecipient[] = [];
 
-    // Parse contact list lines
-    const lines = contactListInput.split('\n').filter((l) => l.trim().length > 0);
-    const recipients: CampaignRecipient[] = lines.map((line, idx) => {
-      const parts = line.split(',').map((p) => p.trim());
-      const phone = parts[0];
-      const name = parts[1] || `Customer ${idx + 1}`;
-      return {
+    if (audienceMode === 'group') {
+      const groupContacts = contacts.filter((c) => c.groupId === targetGroupId);
+      if (groupContacts.length === 0) {
+        setCampFeedback('Selected contact group has 0 contacts. Please add contacts to the group first.');
+        setLaunchingCamp(false);
+        return;
+      }
+      recipients = groupContacts.map((c, idx) => ({
         id: `rec-${Date.now()}-${idx}`,
-        phone,
-        name,
-        variables: {
-          '1': name,
-          '2': 'VIP Package',
-          '3': '40% Off',
-        },
-        status: idx === lines.length - 1 ? 'failed' : 'sent',
-        errorCode: idx === lines.length - 1 ? '131026' : undefined,
-        error: idx === lines.length - 1 ? 'User phone unreachable or invalid WhatsApp account' : undefined,
+        phone: c.phone,
+        name: c.name,
+        variables: { '1': c.name },
+        status: 'sent',
         sentAt: new Date().toISOString(),
-      };
-    });
+      }));
+    } else {
+      const lines = contactListInput.split('\n').filter((l) => l.trim().length > 0);
+      recipients = lines.map((line, idx) => {
+        const parts = line.split(',').map((p) => p.trim());
+        const phone = parts[0];
+        const name = parts[1] || `Customer ${idx + 1}`;
+        return {
+          id: `rec-${Date.now()}-${idx}`,
+          phone,
+          name,
+          variables: { '1': name },
+          status: 'sent',
+          sentAt: new Date().toISOString(),
+        };
+      });
+    }
 
     const totalCount = recipients.length;
-    const failedCount = recipients.filter((r) => r.status === 'failed').length;
-    const sentCount = totalCount - failedCount;
-    const deliveredCount = Math.max(0, sentCount - 1);
-    const readCount = Math.max(0, Math.floor(deliveredCount * 0.75));
-    const leadsCount = Math.max(1, Math.floor(readCount * 0.35));
-
     const newCampaign: Campaign = {
       id: `camp-${Date.now()}`,
       name: newCampName.trim(),
-      templateId: template.id,
-      templateName: template.name,
+      templateId: template?.id || 'tmpl-custom',
+      templateName: template?.name || 'Custom Broadcast',
       createdAt: new Date().toISOString(),
       status: 'completed',
       totalCount,
-      sentCount,
-      deliveredCount,
-      readCount,
-      leadsCount,
-      failedCount,
+      sentCount: totalCount,
+      deliveredCount: totalCount,
+      readCount: 0,
+      leadsCount: 0,
+      failedCount: 0,
       recipients,
     };
 
     // If Meta creds are active, broadcast to real numbers
-    if (creds.phoneNumberId && creds.accessToken) {
+    if (creds.phoneNumberId && creds.accessToken && template) {
       try {
-        for (const r of recipients.slice(0, 3)) {
+        for (const r of recipients.slice(0, 5)) {
           await sendWhatsAppTemplateMessage(creds, r.phone, template.name, template.language, [r.name]);
         }
       } catch (e) {
@@ -315,7 +522,7 @@ export default function DeveloperCampaignHQ() {
     setTimeout(() => setCampFeedback(''), 4500);
   };
 
-  // One-Click Resend to Failed Engine
+  // Resend to Failed
   const handleResendToFailed = (campaignId: string) => {
     setResending(true);
     setResendSuccess('');
@@ -325,9 +532,8 @@ export default function DeveloperCampaignHQ() {
       if (!camp) return;
 
       const failedRecipients = camp.recipients.filter((r) => r.status === 'failed');
-      const recoveredCount = Math.max(1, Math.floor(failedRecipients.length * 0.8));
+      const recoveredCount = failedRecipients.length;
 
-      // Update failed recipients to sent/delivered
       const updatedRecipients = camp.recipients.map((r) => {
         if (r.status === 'failed') {
           return {
@@ -344,7 +550,7 @@ export default function DeveloperCampaignHQ() {
       const updatedCampaign: Campaign = {
         ...camp,
         deliveredCount: camp.deliveredCount + recoveredCount,
-        failedCount: Math.max(0, camp.failedCount - recoveredCount),
+        failedCount: 0,
         recipients: updatedRecipients,
       };
 
@@ -353,14 +559,14 @@ export default function DeveloperCampaignHQ() {
       saveStoredCampaigns(nextCampaigns);
 
       setResending(false);
-      setResendSuccess(`✅ Resend blast completed! Successfully recovered delivery to ${recoveredCount} failed contacts.`);
+      setResendSuccess(`✅ Resend blast completed! Successfully retried delivery.`);
       setTimeout(() => setResendSuccess(''), 4000);
-    }, 900);
+    }, 700);
   };
 
   // Smartphone preview message text
   const previewBody = React.useMemo(() => {
-    let text = bodyText;
+    let text = bodyText || 'Message body preview...';
     detectedVariables.forEach((v) => {
       const val = sampleVars[v] || `[Variable {{${v}}}]`;
       text = text.replace(new RegExp(`\\{\\{${v}\\}\\}`, 'g'), val);
@@ -391,6 +597,8 @@ export default function DeveloperCampaignHQ() {
           setCreds(getStoredCredentials());
           setTemplates(getStoredTemplates());
           setCampaigns(getStoredCampaigns());
+          setGroups(getStoredContactGroups());
+          setContacts(getStoredContacts());
         }}
       />
     );
@@ -407,20 +615,20 @@ export default function DeveloperCampaignHQ() {
         }}
       />
 
-      <main className="container" style={{ marginTop: '28px' }}>
+      <main className="container" style={{ marginTop: '24px' }}>
         {/* Top Header */}
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '24px', flexWrap: 'wrap', gap: '16px' }}>
           <div>
             <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-              <h1 style={{ fontSize: '1.75rem', fontWeight: '800', color: '#fff', letterSpacing: '-0.02em' }}>
+              <h1 style={{ fontSize: '1.75rem', fontWeight: '800', color: 'var(--text-main)', letterSpacing: '-0.02em' }}>
                 Meta Campaign & Developer HQ
               </h1>
-              <span className="badge badge-purple">
+              <span className="badge badge-green">
                 <Sparkles size={12} /> Meta Cloud API v21.0
               </span>
             </div>
             <p style={{ fontSize: '0.86rem', color: 'var(--text-muted)', marginTop: '4px' }}>
-              Configure Meta credentials, design approved interactive templates with sample variables, and launch campaigns.
+              Manage audience contact groups, build Meta-approved templates with samples, and broadcast WhatsApp campaigns.
             </p>
           </div>
 
@@ -430,28 +638,35 @@ export default function DeveloperCampaignHQ() {
               className={`tab-btn ${activeTab === 'campaigns' ? 'active' : ''}`}
             >
               <Send size={16} />
-              <span>Campaigns & Blast</span>
+              <span>Broadcast Engine</span>
+            </button>
+            <button
+              onClick={() => setActiveTab('contacts')}
+              className={`tab-btn ${activeTab === 'contacts' ? 'active' : ''}`}
+            >
+              <Users size={16} />
+              <span>Contact Groups ({contacts.length})</span>
             </button>
             <button
               onClick={() => setActiveTab('templates')}
               className={`tab-btn ${activeTab === 'templates' ? 'active' : ''}`}
             >
               <FileText size={16} />
-              <span>Template Studio</span>
+              <span>Template Studio ({templates.length})</span>
             </button>
             <button
               onClick={() => setActiveTab('resend')}
               className={`tab-btn ${activeTab === 'resend' ? 'active' : ''}`}
             >
               <RotateCcw size={16} />
-              <span>Failed Resend Hub</span>
+              <span>Resend Hub</span>
             </button>
             <button
               onClick={() => setActiveTab('credentials')}
               className={`tab-btn ${activeTab === 'credentials' ? 'active' : ''}`}
             >
               <Key size={16} />
-              <span>Meta Credentials</span>
+              <span>Meta API</span>
             </button>
           </div>
         </div>
@@ -460,7 +675,7 @@ export default function DeveloperCampaignHQ() {
         {activeTab === 'campaigns' && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '28px' }}>
             {campFeedback && (
-              <div style={{ padding: '14px 18px', background: 'rgba(37, 211, 102, 0.15)', border: '1px solid rgba(37, 211, 102, 0.3)', borderRadius: 'var(--radius-md)', color: 'var(--wa-green)', fontSize: '0.9rem', display: 'flex', alignItems: 'center', gap: '10px' }}>
+              <div style={{ padding: '14px 18px', background: 'var(--wa-light)', border: '1px solid rgba(16, 185, 129, 0.3)', borderRadius: 'var(--radius-md)', color: 'var(--wa-green-dark)', fontSize: '0.9rem', display: 'flex', alignItems: 'center', gap: '10px' }}>
                 <CheckCircle2 size={18} />
                 <span>{campFeedback}</span>
               </div>
@@ -469,15 +684,15 @@ export default function DeveloperCampaignHQ() {
             {/* Create & Launch Campaign Form */}
             <div className="glass-panel" style={{ padding: '24px 28px' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '20px' }}>
-                <div style={{ width: '38px', height: '38px', borderRadius: '10px', background: 'rgba(37, 211, 102, 0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--wa-green)' }}>
+                <div style={{ width: '38px', height: '38px', borderRadius: '10px', background: 'var(--wa-light)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--wa-green-dark)' }}>
                   <Send size={20} />
                 </div>
                 <div>
-                  <h2 style={{ fontSize: '1.25rem', fontWeight: '800', color: '#fff' }}>
+                  <h2 style={{ fontSize: '1.25rem', fontWeight: '800', color: 'var(--text-main)' }}>
                     Launch New WhatsApp Campaign Broadcast
                   </h2>
                   <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
-                    Dispatch approved templates to target audience with delivery tracking and instant lead ingestion.
+                    Send broadcasts to a saved Contact Group or custom audience with delivery tracking and instant lead capture.
                   </p>
                 </div>
               </div>
@@ -489,7 +704,7 @@ export default function DeveloperCampaignHQ() {
                     <input
                       type="text"
                       className="form-input"
-                      placeholder="e.g. Diwali Mega Blast 2026, Luxury Villa Showcase"
+                      placeholder="e.g. Festive Special Launch, VIP Customer Invitation"
                       value={newCampName}
                       onChange={(e) => setNewCampName(e.target.value)}
                       required
@@ -497,37 +712,87 @@ export default function DeveloperCampaignHQ() {
                   </div>
 
                   <div className="form-group">
-                    <label className="form-label">Select Approved Meta Template</label>
+                    <label className="form-label">Select Meta Template</label>
                     <select
                       className="form-select"
                       value={selectedTemplateId}
                       onChange={(e) => setSelectedTemplateId(e.target.value)}
                     >
-                      {templates.map((t) => (
-                        <option key={t.id} value={t.id}>
-                          {t.name} ({t.category}) • [{t.status}]
-                        </option>
-                      ))}
+                      {templates.length === 0 ? (
+                        <option value="">No templates created yet (build one in Template Studio)</option>
+                      ) : (
+                        templates.map((t) => (
+                          <option key={t.id} value={t.id}>
+                            {t.name} ({t.category}) • [{t.status}]
+                          </option>
+                        ))
+                      )}
                     </select>
                   </div>
                 </div>
 
-                <div className="form-group">
-                  <label className="form-label">
-                    <span>Audience Recipients (Phone Number, Customer Name per line)</span>
-                    <span style={{ fontSize: '0.74rem', color: 'var(--text-dim)' }}>
-                      CSV format supported: +919876543210, John Doe
-                    </span>
-                  </label>
-                  <textarea
-                    rows={4}
-                    className="form-textarea"
-                    value={contactListInput}
-                    onChange={(e) => setContactListInput(e.target.value)}
-                    placeholder="+919876543210, John Doe&#10;+919812345678, Jane Smith"
-                    required
-                  />
+                {/* Audience Selection Toggle */}
+                <div style={{ marginBottom: '16px' }}>
+                  <label className="form-label">Target Audience Source</label>
+                  <div style={{ display: 'flex', gap: '10px', marginTop: '6px' }}>
+                    <button
+                      type="button"
+                      onClick={() => setAudienceMode('group')}
+                      className={`btn btn-sm ${audienceMode === 'group' ? 'btn-primary' : 'btn-secondary'}`}
+                    >
+                      <Users size={15} />
+                      <span>Use Saved Contact Group ({groups.length} groups)</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setAudienceMode('custom')}
+                      className={`btn btn-sm ${audienceMode === 'custom' ? 'btn-primary' : 'btn-secondary'}`}
+                    >
+                      <Upload size={15} />
+                      <span>Paste Custom Phone Numbers</span>
+                    </button>
+                  </div>
                 </div>
+
+                {audienceMode === 'group' ? (
+                  <div className="form-group" style={{ padding: '16px', background: '#f8fafc', borderRadius: 'var(--radius-md)', border: '1px solid var(--border-subtle)' }}>
+                    <label className="form-label">Select Target Contact Group</label>
+                    {groups.length === 0 ? (
+                      <div style={{ fontSize: '0.84rem', color: 'var(--text-muted)' }}>
+                        No contact groups created yet. Switch to the <strong>Contact Groups</strong> tab to create groups and import contacts!
+                      </div>
+                    ) : (
+                      <select
+                        className="form-select"
+                        value={targetGroupId}
+                        onChange={(e) => setTargetGroupId(e.target.value)}
+                      >
+                        {groups.map((g) => (
+                          <option key={g.id} value={g.id}>
+                            {g.name} ({contacts.filter((c) => c.groupId === g.id).length} contacts)
+                          </option>
+                        ))}
+                      </select>
+                    )}
+                  </div>
+                ) : (
+                  <div className="form-group">
+                    <label className="form-label">
+                      <span>Recipient Numbers (Phone Number, Name per line)</span>
+                      <span style={{ fontSize: '0.74rem', color: 'var(--text-dim)' }}>
+                        e.g. +919876543210, John Doe
+                      </span>
+                    </label>
+                    <textarea
+                      rows={4}
+                      className="form-textarea"
+                      value={contactListInput}
+                      onChange={(e) => setContactListInput(e.target.value)}
+                      placeholder="+919876543210, Customer Name&#10;+919812345678, Another Customer"
+                      required={audienceMode === 'custom'}
+                    />
+                  </div>
+                )}
 
                 <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '16px' }}>
                   <button
@@ -556,11 +821,11 @@ export default function DeveloperCampaignHQ() {
             <div className="glass-panel" style={{ overflow: 'hidden' }}>
               <div style={{ padding: '20px 24px', borderBottom: '1px solid var(--border-subtle)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                 <div>
-                  <h3 style={{ fontSize: '1.15rem', fontWeight: '800', color: '#fff' }}>
-                    Campaign-Wide Analytics & Performance
+                  <h3 style={{ fontSize: '1.15rem', fontWeight: '800', color: 'var(--text-main)' }}>
+                    Campaign Broadcast History & Analytics
                   </h3>
                   <p style={{ fontSize: '0.78rem', color: 'var(--text-muted)' }}>
-                    End-to-end metrics linking targeted numbers, delivered receipts, and generated leads
+                    Track delivery rates, open receipts, and inbound leads generated per broadcast
                   </p>
                 </div>
                 <span className="badge badge-blue">
@@ -573,103 +838,392 @@ export default function DeveloperCampaignHQ() {
                   <tr>
                     <th>Campaign Name & Template</th>
                     <th>Targeted</th>
-                    <th>Delivered (Rate)</th>
-                    <th>Read / Opened</th>
-                    <th>Total Leads (Conv %)</th>
+                    <th>Delivered</th>
+                    <th>Leads Generated</th>
                     <th>Failed</th>
                     <th style={{ textAlign: 'right' }}>Actions</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {campaigns.map((camp) => {
-                    const deliveryRate = camp.totalCount > 0 ? ((camp.deliveredCount / camp.totalCount) * 100).toFixed(1) : '0';
-                    const leadRate = camp.deliveredCount > 0 ? ((camp.leadsCount / camp.deliveredCount) * 100).toFixed(1) : '0';
-
-                    return (
+                  {campaigns.length === 0 ? (
+                    <tr>
+                      <td colSpan={6} style={{ textAlign: 'center', padding: '36px 0', color: 'var(--text-dim)' }}>
+                        No campaigns launched yet. Create and broadcast your first campaign above!
+                      </td>
+                    </tr>
+                  ) : (
+                    campaigns.map((camp) => (
                       <tr key={camp.id}>
                         <td>
-                          <div style={{ fontWeight: 700, color: '#fff', fontSize: '0.95rem' }}>{camp.name}</div>
+                          <div style={{ fontWeight: 700, color: 'var(--text-main)', fontSize: '0.95rem' }}>{camp.name}</div>
                           <div style={{ fontSize: '0.76rem', color: 'var(--text-dim)', marginTop: '2px' }}>
                             Template: <code>{camp.templateName}</code> • {new Date(camp.createdAt).toLocaleDateString()}
                           </div>
                         </td>
                         <td>
-                          <span style={{ fontWeight: 700, color: '#fff' }}>{camp.totalCount}</span>
+                          <span style={{ fontWeight: 700, color: 'var(--text-main)' }}>{camp.totalCount}</span>
                         </td>
                         <td>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                            <span style={{ fontWeight: 700, color: '#4ade80' }}>{camp.deliveredCount}</span>
-                            <span className="badge badge-green" style={{ fontSize: '0.7rem' }}>{deliveryRate}%</span>
-                          </div>
+                          <span className="badge badge-green">
+                            {camp.deliveredCount} Delivered
+                          </span>
                         </td>
                         <td>
-                          <div style={{ color: '#38bdf8', fontWeight: 600 }}>
-                            {camp.readCount}
-                          </div>
-                        </td>
-                        <td>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                            <span style={{ fontWeight: 800, color: 'var(--wa-green)', fontSize: '1rem' }}>
-                              {camp.leadsCount} Leads
-                            </span>
-                            <span className="badge badge-green" style={{ fontSize: '0.7rem' }}>
-                              {leadRate}%
-                            </span>
-                          </div>
+                          <span className="badge badge-purple" style={{ fontWeight: 700 }}>
+                            {camp.leadsCount} Inbound Leads
+                          </span>
                         </td>
                         <td>
                           {camp.failedCount > 0 ? (
-                            <span className="badge badge-red" style={{ fontSize: '0.75rem' }}>
-                              {camp.failedCount} Failed
-                            </span>
+                            <span className="badge badge-red">{camp.failedCount} Failed</span>
                           ) : (
-                            <span className="badge badge-green" style={{ fontSize: '0.75rem' }}>0 Failed</span>
+                            <span className="badge badge-green">0 Failed</span>
                           )}
                         </td>
                         <td style={{ textAlign: 'right' }}>
-                          <div style={{ display: 'inline-flex', gap: '8px' }}>
-                            {camp.failedCount > 0 && (
-                              <button
-                                onClick={() => handleResendToFailed(camp.id)}
-                                disabled={resending}
-                                className="btn btn-danger btn-sm"
-                                title="Resend to failed numbers"
-                              >
-                                <RotateCcw size={13} />
-                                <span>Resend</span>
-                              </button>
-                            )}
-                            <a
-                              href="/"
-                              className="btn btn-outline-wa btn-sm"
-                              title="View Leads in CRM"
-                            >
-                              <span>View Leads</span>
-                              <ChevronRight size={13} />
-                            </a>
-                          </div>
+                          <a href="/" className="btn btn-outline-wa btn-sm">
+                            <span>View Leads</span>
+                            <ChevronRight size={13} />
+                          </a>
                         </td>
                       </tr>
-                    );
-                  })}
+                    ))
+                  )}
                 </tbody>
               </table>
             </div>
           </div>
         )}
 
-        {/* TAB 2: META TEMPLATE STUDIO */}
+        {/* TAB 2: AUDIENCE CONTACT GROUPS & MULTI-FIELD IMPORT */}
+        {activeTab === 'contacts' && (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '28px' }}>
+            {contactFeedback && (
+              <div style={{ padding: '14px 18px', background: 'var(--wa-light)', border: '1px solid rgba(16, 185, 129, 0.3)', borderRadius: 'var(--radius-md)', color: 'var(--wa-green-dark)', fontSize: '0.9rem', display: 'flex', alignItems: 'center', gap: '10px' }}>
+                <CheckCircle2 size={18} />
+                <span>{contactFeedback}</span>
+              </div>
+            )}
+
+            {/* Groups Creation & Overview Bar */}
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 2fr', gap: '24px' }}>
+              {/* Create Group Box */}
+              <div className="glass-panel" style={{ padding: '24px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '16px' }}>
+                  <FolderPlus size={20} color="var(--wa-green-dark)" />
+                  <h3 style={{ fontSize: '1.1rem', fontWeight: 800, color: 'var(--text-main)' }}>
+                    Create Contact Group
+                  </h3>
+                </div>
+
+                <form onSubmit={handleCreateGroup}>
+                  <div className="form-group">
+                    <label className="form-label">Group Name</label>
+                    <input
+                      type="text"
+                      className="form-input"
+                      placeholder="e.g. VIP Customers, Real Estate Investors"
+                      value={newGroupName}
+                      onChange={(e) => setNewGroupName(e.target.value)}
+                      required
+                    />
+                  </div>
+
+                  <div className="form-group">
+                    <label className="form-label">Description (Optional)</label>
+                    <input
+                      type="text"
+                      className="form-input"
+                      placeholder="e.g. Leads from October trade expo"
+                      value={newGroupDesc}
+                      onChange={(e) => setNewGroupDesc(e.target.value)}
+                    />
+                  </div>
+
+                  <button type="submit" className="btn btn-primary" style={{ width: '100%', marginTop: '8px' }}>
+                    <Plus size={16} />
+                    <span>Create Group</span>
+                  </button>
+                </form>
+              </div>
+
+              {/* Group Cards List */}
+              <div className="glass-panel" style={{ padding: '24px' }}>
+                <h3 style={{ fontSize: '1.1rem', fontWeight: 800, color: 'var(--text-main)', marginBottom: '14px' }}>
+                  Existing Contact Groups ({groups.length})
+                </h3>
+
+                {groups.length === 0 ? (
+                  <div style={{ textAlign: 'center', padding: '36px 12px', color: 'var(--text-dim)', fontSize: '0.85rem' }}>
+                    No contact groups created yet. Create your first group on the left to organize your audience!
+                  </div>
+                ) : (
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '14px' }}>
+                    {groups.map((grp) => {
+                      const count = contacts.filter((c) => c.groupId === grp.id).length;
+                      return (
+                        <div key={grp.id} style={{ padding: '16px', background: '#f8fafc', borderRadius: 'var(--radius-md)', border: '1px solid var(--border-subtle)', display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
+                          <div>
+                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '6px' }}>
+                              <h4 style={{ fontSize: '0.98rem', fontWeight: 700, color: 'var(--text-main)' }}>{grp.name}</h4>
+                              <button
+                                onClick={() => handleDeleteGroup(grp.id)}
+                                style={{ background: 'transparent', border: 'none', color: '#e11d48', cursor: 'pointer', padding: '4px' }}
+                                title="Delete Group"
+                              >
+                                <Trash2 size={15} />
+                              </button>
+                            </div>
+                            {grp.description && (
+                              <p style={{ fontSize: '0.76rem', color: 'var(--text-muted)', marginBottom: '10px' }}>
+                                {grp.description}
+                              </p>
+                            )}
+                          </div>
+                          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: '10px', paddingTop: '8px', borderTop: '1px solid #e2e8f0' }}>
+                            <span className="badge badge-green">{count} Contacts</span>
+                            <span style={{ fontSize: '0.72rem', color: 'var(--text-dim)' }}>
+                              {new Date(grp.createdAt).toLocaleDateString()}
+                            </span>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Import Contacts Section */}
+            <div className="glass-panel" style={{ padding: '24px 28px' }}>
+              <h3 style={{ fontSize: '1.2rem', fontWeight: 800, color: 'var(--text-main)', marginBottom: '6px' }}>
+                Import Contacts into Groups (Multiple Fields Supported)
+              </h3>
+              <p style={{ fontSize: '0.82rem', color: 'var(--text-muted)', marginBottom: '20px' }}>
+                Import contacts with Phone Number, Name, Email, City, and Custom Tags.
+              </p>
+
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '24px' }}>
+                {/* Single Contact Form */}
+                <form onSubmit={handleAddSingleContact} style={{ padding: '20px', background: '#f8fafc', borderRadius: 'var(--radius-md)', border: '1px solid var(--border-subtle)' }}>
+                  <h4 style={{ fontSize: '0.98rem', fontWeight: 700, color: 'var(--text-main)', marginBottom: '14px' }}>
+                    Option 1: Add Single Contact
+                  </h4>
+
+                  <div className="form-group">
+                    <label className="form-label">Target Group</label>
+                    <select
+                      className="form-select"
+                      value={singleGroupId}
+                      onChange={(e) => setSingleGroupId(e.target.value)}
+                    >
+                      {groups.map((g) => (
+                        <option key={g.id} value={g.id}>{g.name}</option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+                    <div className="form-group">
+                      <label className="form-label">Full Name</label>
+                      <input
+                        type="text"
+                        className="form-input"
+                        placeholder="John Doe"
+                        value={singleName}
+                        onChange={(e) => setSingleName(e.target.value)}
+                      />
+                    </div>
+                    <div className="form-group">
+                      <label className="form-label">Phone Number *</label>
+                      <input
+                        type="text"
+                        className="form-input"
+                        placeholder="+919876543210"
+                        value={singlePhone}
+                        onChange={(e) => setSinglePhone(e.target.value)}
+                        required
+                      />
+                    </div>
+                  </div>
+
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+                    <div className="form-group">
+                      <label className="form-label">Email (Optional)</label>
+                      <input
+                        type="email"
+                        className="form-input"
+                        placeholder="client@gmail.com"
+                        value={singleEmail}
+                        onChange={(e) => setSingleEmail(e.target.value)}
+                      />
+                    </div>
+                    <div className="form-group">
+                      <label className="form-label">City / Tag</label>
+                      <input
+                        type="text"
+                        className="form-input"
+                        placeholder="e.g. Mumbai, VIP"
+                        value={singleCity}
+                        onChange={(e) => setSingleCity(e.target.value)}
+                      />
+                    </div>
+                  </div>
+
+                  <button type="submit" className="btn btn-secondary" style={{ width: '100%', marginTop: '6px' }}>
+                    <Plus size={16} />
+                    <span>Save Contact</span>
+                  </button>
+                </form>
+
+                {/* Bulk CSV / Multi-Line Import Form */}
+                <form onSubmit={handleBulkImportContacts} style={{ padding: '20px', background: '#f8fafc', borderRadius: 'var(--radius-md)', border: '1px solid var(--border-subtle)' }}>
+                  <h4 style={{ fontSize: '0.98rem', fontWeight: 700, color: 'var(--text-main)', marginBottom: '14px' }}>
+                    Option 2: Bulk Multi-Line / CSV Paste
+                  </h4>
+
+                  <div className="form-group">
+                    <label className="form-label">Assign to Group</label>
+                    <select
+                      className="form-select"
+                      value={bulkGroupId}
+                      onChange={(e) => setBulkGroupId(e.target.value)}
+                    >
+                      {groups.map((g) => (
+                        <option key={g.id} value={g.id}>{g.name}</option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div className="form-group">
+                    <label className="form-label">
+                      <span>Paste Contacts (Phone, Name, Email, City, Tag)</span>
+                      <span style={{ fontSize: '0.72rem', color: 'var(--text-dim)' }}>1 per line</span>
+                    </label>
+                    <textarea
+                      rows={5}
+                      className="form-textarea"
+                      placeholder="+919876543210, Arun Kumar, arun@mail.com, Chennai, VIP&#10;+919812345678, Priya Sharma, priya@mail.com, Delhi, Prime"
+                      value={bulkCsvText}
+                      onChange={(e) => setBulkCsvText(e.target.value)}
+                      required
+                    />
+                  </div>
+
+                  <button type="submit" className="btn btn-primary" style={{ width: '100%' }}>
+                    <Upload size={16} />
+                    <span>Import All Lines</span>
+                  </button>
+                </form>
+              </div>
+            </div>
+
+            {/* Contacts Table with Search & Delete */}
+            <div className="glass-panel" style={{ overflow: 'hidden' }}>
+              <div style={{ padding: '18px 24px', borderBottom: '1px solid var(--border-subtle)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '14px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flex: 1, minWidth: '260px' }}>
+                  <div style={{ position: 'relative', flex: 1 }}>
+                    <Search size={16} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-dim)' }} />
+                    <input
+                      type="text"
+                      className="form-input"
+                      placeholder="Search contacts by name, phone, or city..."
+                      value={contactSearchQuery}
+                      onChange={(e) => setContactSearchQuery(e.target.value)}
+                      style={{ paddingLeft: '38px', height: '38px' }}
+                    />
+                  </div>
+
+                  <select
+                    className="form-select"
+                    value={selectedGroupFilter}
+                    onChange={(e) => setSelectedGroupFilter(e.target.value)}
+                    style={{ width: '200px', height: '38px' }}
+                  >
+                    <option value="all">All Groups ({contacts.length})</option>
+                    {groups.map((g) => (
+                      <option key={g.id} value={g.id}>{g.name}</option>
+                    ))}
+                  </select>
+                </div>
+
+                <span className="badge badge-green">
+                  {filteredContacts.length} Contacts Showing
+                </span>
+              </div>
+
+              <table className="custom-table">
+                <thead>
+                  <tr>
+                    <th>Contact Name</th>
+                    <th>WhatsApp Phone</th>
+                    <th>Group</th>
+                    <th>Email</th>
+                    <th>City / Tag</th>
+                    <th style={{ textAlign: 'right' }}>Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {filteredContacts.length === 0 ? (
+                    <tr>
+                      <td colSpan={6} style={{ textAlign: 'center', padding: '36px 0', color: 'var(--text-dim)' }}>
+                        No contacts found. Use the forms above to add or import your contact lists!
+                      </td>
+                    </tr>
+                  ) : (
+                    filteredContacts.map((c) => (
+                      <tr key={c.id}>
+                        <td>
+                          <div style={{ fontWeight: 700, color: 'var(--text-main)' }}>{c.name}</div>
+                        </td>
+                        <td>
+                          <span style={{ fontFamily: 'monospace', fontWeight: 600, color: 'var(--wa-green-dark)' }}>
+                            {c.phone}
+                          </span>
+                        </td>
+                        <td>
+                          <span className="badge badge-purple">{c.groupName}</span>
+                        </td>
+                        <td style={{ color: 'var(--text-muted)', fontSize: '0.82rem' }}>
+                          {c.email || '—'}
+                        </td>
+                        <td>
+                          {c.city ? (
+                            <span className="badge badge-blue">{c.city}</span>
+                          ) : (
+                            <span style={{ color: 'var(--text-dim)' }}>—</span>
+                          )}
+                        </td>
+                        <td style={{ textAlign: 'right' }}>
+                          <button
+                            onClick={() => handleDeleteContact(c.id)}
+                            style={{ background: 'transparent', border: 'none', color: '#e11d48', cursor: 'pointer', padding: '6px' }}
+                            title="Delete Contact"
+                          >
+                            <Trash2 size={16} />
+                          </button>
+                        </td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )}
+
+        {/* TAB 3: META TEMPLATE STUDIO */}
         {activeTab === 'templates' && (
           <div className="responsive-grid-split" style={{ display: 'grid', gridTemplateColumns: '1.2fr 0.8fr', gap: '28px', alignItems: 'flex-start' }}>
             {/* Template Editor Form */}
             <div className="glass-panel" style={{ padding: '24px 28px' }}>
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '20px' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                  <div style={{ width: '38px', height: '38px', borderRadius: '10px', background: 'rgba(37, 211, 102, 0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--wa-green)' }}>
+                  <div style={{ width: '38px', height: '38px', borderRadius: '10px', background: 'var(--wa-light)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--wa-green-dark)' }}>
                     <FileText size={20} />
                   </div>
                   <div>
-                    <h2 style={{ fontSize: '1.2rem', fontWeight: '800', color: '#fff' }}>
+                    <h2 style={{ fontSize: '1.2rem', fontWeight: '800', color: 'var(--text-main)' }}>
                       Meta Template Builder & Approval Studio
                     </h2>
                     <p style={{ fontSize: '0.78rem', color: 'var(--text-muted)' }}>
@@ -680,7 +1234,7 @@ export default function DeveloperCampaignHQ() {
               </div>
 
               {templateStatusToast && (
-                <div style={{ padding: '12px 16px', background: 'rgba(37, 211, 102, 0.15)', border: '1px solid rgba(37, 211, 102, 0.3)', borderRadius: 'var(--radius-md)', color: 'var(--wa-green)', fontSize: '0.85rem', marginBottom: '20px' }}>
+                <div style={{ padding: '12px 16px', background: 'var(--wa-light)', border: '1px solid rgba(16, 185, 129, 0.3)', borderRadius: 'var(--radius-md)', color: 'var(--wa-green-dark)', fontSize: '0.85rem', marginBottom: '20px' }}>
                   {templateStatusToast}
                 </div>
               )}
@@ -761,7 +1315,7 @@ export default function DeveloperCampaignHQ() {
                 <div className="form-group">
                   <label className="form-label">
                     <span>Message Body (Use {"{{1}}"}, {"{{2}}"} for variables)</span>
-                    <span style={{ color: 'var(--wa-green)', fontSize: '0.75rem' }}>
+                    <span style={{ color: 'var(--wa-green-dark)', fontSize: '0.75rem' }}>
                       {detectedVariables.length} variable(s) detected
                     </span>
                   </label>
@@ -777,10 +1331,10 @@ export default function DeveloperCampaignHQ() {
 
                 {/* Dynamic Sample Values for Meta Approval */}
                 {detectedVariables.length > 0 && (
-                  <div style={{ padding: '16px', background: 'rgba(59, 130, 246, 0.08)', border: '1px solid rgba(59, 130, 246, 0.25)', borderRadius: 'var(--radius-md)', marginBottom: '16px' }}>
+                  <div style={{ padding: '16px', background: '#eff6ff', border: '1px solid #bfdbfe', borderRadius: 'var(--radius-md)', marginBottom: '16px' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '10px' }}>
-                      <Sparkles size={16} color="#60a5fa" />
-                      <span style={{ fontSize: '0.84rem', fontWeight: 700, color: '#93c5fd' }}>
+                      <Sparkles size={16} color="#2563eb" />
+                      <span style={{ fontSize: '0.84rem', fontWeight: 700, color: '#1d4ed8' }}>
                         Sample Variable Values (Strictly Required by Meta for Approval)
                       </span>
                     </div>
@@ -821,7 +1375,7 @@ export default function DeveloperCampaignHQ() {
                 {/* Interactive Quick Reply Buttons */}
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px' }}>
                   <div className="form-group">
-                    <label className="form-label">Interactive Button 1 (Quick Reply)</label>
+                    <label className="form-label">Interactive Button 1</label>
                     <input
                       type="text"
                       className="form-input"
@@ -831,7 +1385,7 @@ export default function DeveloperCampaignHQ() {
                     />
                   </div>
                   <div className="form-group">
-                    <label className="form-label">Interactive Button 2 (Quick Reply)</label>
+                    <label className="form-label">Interactive Button 2</label>
                     <input
                       type="text"
                       className="form-input"
@@ -912,44 +1466,46 @@ export default function DeveloperCampaignHQ() {
           </div>
         )}
 
-        {/* TAB 3: RESEND TO FAILED ENGINE */}
+        {/* TAB 4: RESEND TO FAILED ENGINE */}
         {activeTab === 'resend' && (
           <div className="glass-panel" style={{ padding: '28px' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '24px' }}>
-              <div style={{ width: '42px', height: '42px', borderRadius: '12px', background: 'rgba(244, 63, 94, 0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fb7185' }}>
+              <div style={{ width: '42px', height: '42px', borderRadius: '12px', background: '#fff1f2', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#e11d48' }}>
                 <RotateCcw size={22} />
               </div>
               <div>
-                <h2 style={{ fontSize: '1.25rem', fontWeight: '800', color: '#fff' }}>
+                <h2 style={{ fontSize: '1.25rem', fontWeight: '800', color: 'var(--text-main)' }}>
                   Smart Failed Delivery & Resend Engine
                 </h2>
                 <p style={{ fontSize: '0.82rem', color: 'var(--text-muted)' }}>
-                  Isolate undelivered recipients, analyze Meta error codes, and trigger 1-click fallback broadcasts.
+                  Isolate undelivered recipients, analyze Meta error codes, and trigger 1-click retry broadcasts.
                 </p>
               </div>
             </div>
 
             {resendSuccess && (
-              <div style={{ padding: '14px 18px', background: 'rgba(37, 211, 102, 0.15)', border: '1px solid rgba(37, 211, 102, 0.3)', borderRadius: 'var(--radius-md)', color: 'var(--wa-green)', fontSize: '0.9rem', marginBottom: '24px' }}>
+              <div style={{ padding: '14px 18px', background: 'var(--wa-light)', border: '1px solid rgba(16, 185, 129, 0.3)', borderRadius: 'var(--radius-md)', color: 'var(--wa-green-dark)', fontSize: '0.9rem', marginBottom: '24px' }}>
                 {resendSuccess}
               </div>
             )}
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-              {campaigns.map((camp) => {
-                const failedList = camp.recipients.filter((r) => r.status === 'failed');
-
-                return (
-                  <div key={camp.id} style={{ padding: '20px', background: 'rgba(15, 23, 42, 0.6)', border: '1px solid var(--border-subtle)', borderRadius: 'var(--radius-md)' }}>
+              {campaigns.length === 0 ? (
+                <div style={{ textAlign: 'center', padding: '40px 0', color: 'var(--text-dim)' }}>
+                  No campaigns dispatched yet. Failed messages will automatically show up here with 1-click retry!
+                </div>
+              ) : (
+                campaigns.map((camp) => (
+                  <div key={camp.id} style={{ padding: '20px', background: '#f8fafc', border: '1px solid var(--border-subtle)', borderRadius: 'var(--radius-md)' }}>
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '12px' }}>
                       <div>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                          <h4 style={{ fontSize: '1.05rem', fontWeight: 700, color: '#fff' }}>{camp.name}</h4>
+                          <h4 style={{ fontSize: '1.05rem', fontWeight: 700, color: 'var(--text-main)' }}>{camp.name}</h4>
                           <span className={`badge ${camp.failedCount > 0 ? 'badge-red' : 'badge-green'}`}>
                             {camp.failedCount} Failed
                           </span>
                         </div>
-                        <p style={{ fontSize: '0.78rem', color: 'var(--text-dim)', marginTop: '4px' }}>
+                        <p style={{ fontSize: '0.78rem', color: 'var(--text-muted)', marginTop: '4px' }}>
                           Template: <code>{camp.templateName}</code> • Total audience: {camp.totalCount}
                         </p>
                       </div>
@@ -965,44 +1521,23 @@ export default function DeveloperCampaignHQ() {
                         </button>
                       )}
                     </div>
-
-                    {failedList.length > 0 && (
-                      <div style={{ marginTop: '16px', borderTop: '1px solid var(--border-subtle)', paddingTop: '14px' }}>
-                        <div style={{ fontSize: '0.8rem', fontWeight: 700, color: 'var(--text-muted)', marginBottom: '8px' }}>
-                          Diagnostic Breakdown of Failed Numbers:
-                        </div>
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                          {failedList.map((f) => (
-                            <div key={f.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '8px 12px', background: 'rgba(244, 63, 94, 0.06)', borderRadius: '6px', fontSize: '0.8rem' }}>
-                              <div>
-                                <span style={{ fontWeight: 600, color: '#fff' }}>{f.name}</span>
-                                <span style={{ color: 'var(--text-dim)', marginLeft: '10px', fontFamily: 'monospace' }}>{f.phone}</span>
-                              </div>
-                              <div style={{ color: '#fb7185' }}>
-                                Error {f.errorCode || '131026'}: {f.error || 'User unreachable'}
-                              </div>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    )}
                   </div>
-                );
-              })}
+                ))
+              )}
             </div>
           </div>
         )}
 
-        {/* TAB 4: META CREDENTIALS & WEBHOOK CONFIG */}
+        {/* TAB 5: META CREDENTIALS & WEBHOOK CONFIG */}
         {activeTab === 'credentials' && (
           <div className="responsive-grid-split" style={{ display: 'grid', gridTemplateColumns: '1.2fr 0.8fr', gap: '28px' }}>
             <div className="glass-panel" style={{ padding: '24px 28px' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '20px' }}>
-                <div style={{ width: '38px', height: '38px', borderRadius: '10px', background: 'rgba(37, 211, 102, 0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--wa-green)' }}>
+                <div style={{ width: '38px', height: '38px', borderRadius: '10px', background: 'var(--wa-light)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--wa-green-dark)' }}>
                   <Key size={20} />
                 </div>
                 <div>
-                  <h2 style={{ fontSize: '1.25rem', fontWeight: '800', color: '#fff' }}>
+                  <h2 style={{ fontSize: '1.25rem', fontWeight: '800', color: 'var(--text-main)' }}>
                     Meta WhatsApp Cloud API Credentials
                   </h2>
                   <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
@@ -1014,10 +1549,10 @@ export default function DeveloperCampaignHQ() {
               {testResult && (
                 <div style={{
                   padding: '12px 16px',
-                  background: testResult.success ? 'rgba(37, 211, 102, 0.15)' : 'rgba(244, 63, 94, 0.15)',
-                  border: `1px solid ${testResult.success ? 'rgba(37, 211, 102, 0.3)' : 'rgba(244, 63, 94, 0.3)'}`,
+                  background: testResult.success ? 'var(--wa-light)' : '#fff1f2',
+                  border: `1px solid ${testResult.success ? 'rgba(16, 185, 129, 0.3)' : 'rgba(225, 29, 72, 0.3)'}`,
                   borderRadius: 'var(--radius-md)',
-                  color: testResult.success ? 'var(--wa-green)' : '#fb7185',
+                  color: testResult.success ? 'var(--wa-green-dark)' : '#be123c',
                   fontSize: '0.85rem',
                   marginBottom: '20px',
                   display: 'flex',
@@ -1099,8 +1634,8 @@ export default function DeveloperCampaignHQ() {
             <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
               <div className="glass-panel" style={{ padding: '24px' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '14px' }}>
-                  <ShieldCheck size={20} color="var(--wa-green)" />
-                  <h3 style={{ fontSize: '1.05rem', fontWeight: 700, color: '#fff' }}>
+                  <ShieldCheck size={20} color="var(--wa-green-dark)" />
+                  <h3 style={{ fontSize: '1.05rem', fontWeight: 700, color: 'var(--text-main)' }}>
                     WhatsApp Phone Number Status
                   </h3>
                 </div>
@@ -1115,14 +1650,14 @@ export default function DeveloperCampaignHQ() {
 
                   <div style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 0', borderBottom: '1px solid var(--border-subtle)' }}>
                     <span style={{ color: 'var(--text-muted)' }}>Quality Rating:</span>
-                    <span style={{ color: 'var(--wa-green)', fontWeight: 700 }}>
+                    <span style={{ color: 'var(--wa-green-dark)', fontWeight: 700 }}>
                       {creds.phoneDetails?.quality_rating || 'GREEN (High)'}
                     </span>
                   </div>
 
                   <div style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 0' }}>
                     <span style={{ color: 'var(--text-muted)' }}>Verified Display Name:</span>
-                    <span style={{ color: '#fff', fontWeight: 600 }}>
+                    <span style={{ color: 'var(--text-main)', fontWeight: 600 }}>
                       {creds.phoneDetails?.verified_name || 'A5A Solutions'}
                     </span>
                   </div>
@@ -1131,19 +1666,19 @@ export default function DeveloperCampaignHQ() {
 
               {/* Vercel Webhook Endpoint Guide */}
               <div className="glass-panel" style={{ padding: '24px' }}>
-                <h3 style={{ fontSize: '1rem', fontWeight: 700, color: '#fff', marginBottom: '8px' }}>
+                <h3 style={{ fontSize: '1rem', fontWeight: 700, color: 'var(--text-main)', marginBottom: '8px' }}>
                   Vercel Webhook URL for Meta Dashboard
                 </h3>
                 <p style={{ fontSize: '0.78rem', color: 'var(--text-muted)', marginBottom: '14px' }}>
                   Paste this endpoint into your Meta App &gt; WhatsApp &gt; Configuration &gt; Webhook:
                 </p>
 
-                <div style={{ padding: '10px 12px', background: 'rgba(0, 0, 0, 0.4)', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border-subtle)', fontFamily: 'monospace', fontSize: '0.78rem', color: 'var(--wa-green)', wordBreak: 'break-all' }}>
+                <div style={{ padding: '10px 12px', background: '#f8fafc', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border-subtle)', fontFamily: 'monospace', fontSize: '0.78rem', color: 'var(--wa-green-dark)', wordBreak: 'break-all' }}>
                   https://your-project.vercel.app/api/webhook
                 </div>
 
-                <div style={{ marginTop: '12px', fontSize: '0.76rem', color: 'var(--text-dim)' }}>
-                  Verify Token: <code style={{ color: '#fff' }}>{creds.verifyToken}</code>
+                <div style={{ marginTop: '12px', fontSize: '0.76rem', color: 'var(--text-muted)' }}>
+                  Verify Token: <code style={{ color: 'var(--text-main)', background: '#f1f5f9', padding: '2px 6px', borderRadius: '4px' }}>{creds.verifyToken}</code>
                 </div>
               </div>
             </div>

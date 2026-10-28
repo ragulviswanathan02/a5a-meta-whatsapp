@@ -107,7 +107,29 @@ export interface Lead {
   updatedAt: string;
 }
 
+export interface ContactGroup {
+  id: string;
+  name: string;
+  description?: string;
+  contactCount: number;
+  createdAt: string;
+}
+
+export interface Contact {
+  id: string;
+  name: string;
+  phone: string;
+  email?: string;
+  groupId: string;
+  groupName: string;
+  tags: string[];
+  city?: string;
+  customField?: string;
+  createdAt: string;
+}
+
 export interface AuthState {
   leadsAuthed: boolean;
   developerAuthed: boolean;
 }
+

@@ -149,11 +149,11 @@ export default function LeadDetailDrawer({
     <div className="drawer-overlay" onClick={onClose}>
       <div className="drawer-content" onClick={(e) => e.stopPropagation()}>
         {/* Top Header */}
-        <div style={{ padding: '20px 24px', borderBottom: '1px solid var(--border-subtle)', background: 'rgba(15, 23, 42, 0.95)' }}>
+        <div style={{ padding: '20px 24px', borderBottom: '1px solid var(--border-subtle)', background: '#ffffff' }}>
           <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '16px' }}>
             <div>
               <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '6px' }}>
-                <h2 style={{ fontSize: '1.35rem', fontWeight: '800', color: '#fff' }}>
+                <h2 style={{ fontSize: '1.35rem', fontWeight: '800', color: 'var(--text-main)' }}>
                   {lead.name}
                 </h2>
                 {lead.priority === 'hot' && (
@@ -216,7 +216,7 @@ export default function LeadDetailDrawer({
         </div>
 
         {/* Lead Settings Bar */}
-        <div style={{ padding: '16px 24px', background: 'rgba(0, 0, 0, 0.25)', borderBottom: '1px solid var(--border-subtle)', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px' }}>
+        <div style={{ padding: '16px 24px', background: '#f8fafc', borderBottom: '1px solid var(--border-subtle)', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px' }}>
           <div>
             <label className="form-label" style={{ fontSize: '0.75rem' }}>Pipeline Stage</label>
             <select
@@ -250,7 +250,7 @@ export default function LeadDetailDrawer({
         </div>
 
         {/* Tab Navigation */}
-        <div style={{ display: 'flex', borderBottom: '1px solid var(--border-subtle)', background: 'rgba(15, 23, 42, 0.4)' }}>
+        <div style={{ display: 'flex', borderBottom: '1px solid var(--border-subtle)', background: '#f8fafc' }}>
           <button
             onClick={() => setActiveTab('chat')}
             style={{
@@ -405,7 +405,7 @@ export default function LeadDetailDrawer({
 
         {/* Bottom Reply Bar (WhatsApp Cloud API Direct Reply) */}
         {activeTab === 'chat' && (
-          <form onSubmit={handleSendReply} style={{ padding: '16px 20px', borderTop: '1px solid var(--border-subtle)', background: 'rgba(15, 23, 42, 0.95)', display: 'flex', gap: '10px' }}>
+          <form onSubmit={handleSendReply} style={{ padding: '16px 20px', borderTop: '1px solid var(--border-subtle)', background: '#ffffff', display: 'flex', gap: '10px' }}>
             <input
               type="text"
               className="form-input"
