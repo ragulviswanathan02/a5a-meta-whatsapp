@@ -29,8 +29,20 @@ import {
   Sliders,
   Flame,
   Search,
-  Tag
+  Tag,
+  Globe,
+  PhoneCall,
+  ExternalLink,
+  PlusCircle
 } from 'lucide-react';
+
+export interface TemplateButtonConfig {
+  id: string;
+  type: 'QUICK_REPLY' | 'URL' | 'PHONE_NUMBER';
+  text: string;
+  url?: string;
+  phoneNumber?: string;
+}
 import { 
   MetaCredentials, 
   WhatsAppTemplate, 
@@ -103,9 +115,38 @@ export default function DeveloperCampaignHQ() {
     '1': 'John Doe',
     '2': 'VIP Launch Package',
   });
-  const [btn1Text, setBtn1Text] = useState('🔥 I am Interested');
-  const [btn2Text, setBtn2Text] = useState('📞 Request Call Back');
+  const [templateButtons, setTemplateButtons] = useState<TemplateButtonConfig[]>([
+    { id: 'btn-1', type: 'QUICK_REPLY', text: '🔥 I am Interested' },
+    { id: 'btn-2', type: 'QUICK_REPLY', text: '📞 Request Call Back' },
+    { id: 'btn-3', type: 'URL', text: '🌐 Visit Website', url: 'https://a5ameta.com' },
+  ]);
   const [templateStatusToast, setTemplateStatusToast] = useState('');
+
+  const handleAddButton = (type: 'QUICK_REPLY' | 'URL' | 'PHONE_NUMBER') => {
+    if (templateButtons.length >= 5) return;
+    const defaultText =
+      type === 'URL'
+        ? '🌐 Visit Website'
+        : type === 'PHONE_NUMBER'
+        ? '📞 Call Sales Team'
+        : '🔥 Interested';
+    const newBtn: TemplateButtonConfig = {
+      id: `btn-${Date.now()}`,
+      type,
+      text: defaultText,
+      url: type === 'URL' ? 'https://a5ameta.com' : undefined,
+      phoneNumber: type === 'PHONE_NUMBER' ? '+919876543210' : undefined,
+    };
+    setTemplateButtons([...templateButtons, newBtn]);
+  };
+
+  const handleRemoveButton = (id: string) => {
+    setTemplateButtons(templateButtons.filter((b) => b.id !== id));
+  };
+
+  const handleUpdateButton = (id: string, updates: Partial<TemplateButtonConfig>) => {
+    setTemplateButtons(templateButtons.map((b) => (b.id === id ? { ...b, ...updates } : b)));
+  };
 
   // New Campaign state
   const [newCampName, setNewCampName] = useState('');
@@ -392,9 +433,28 @@ export default function DeveloperCampaignHQ() {
       });
     }
 
-    const buttons: any[] = [];
-    if (btn1Text.trim()) buttons.push({ type: 'QUICK_REPLY', text: btn1Text.trim() });
-    if (btn2Text.trim()) buttons.push({ type: 'QUICK_REPLY', text: btn2Text.trim() });
+    const buttons: any[] = templateButtons
+      .filter((b) => b.text.trim())
+      .map((b) => {
+        if (b.type === 'URL') {
+          return {
+            type: 'URL',
+            text: b.text.trim(),
+            url: b.url?.trim() || 'https://a5ameta.com',
+          };
+        }
+        if (b.type === 'PHONE_NUMBER') {
+          return {
+            type: 'PHONE_NUMBER',
+            text: b.text.trim(),
+            phone_number: b.phoneNumber?.trim() || '+919876543210',
+          };
+        }
+        return {
+          type: 'QUICK_REPLY',
+          text: b.text.trim(),
+        };
+      });
 
     if (buttons.length > 0) {
       components.push({
@@ -1372,27 +1432,136 @@ export default function DeveloperCampaignHQ() {
                   />
                 </div>
 
-                {/* Interactive Quick Reply Buttons */}
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px' }}>
-                  <div className="form-group">
-                    <label className="form-label">Interactive Button 1</label>
-                    <input
-                      type="text"
-                      className="form-input"
-                      value={btn1Text}
-                      onChange={(e) => setBtn1Text(e.target.value)}
-                      placeholder="e.g. 🔥 I am Interested"
-                    />
+                {/* Interactive Action Buttons (Quick Reply, Visit Website, Direct Call) */}
+                <div style={{ marginBottom: '20px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px', flexWrap: 'wrap', gap: '8px' }}>
+                    <div>
+                      <label className="form-label" style={{ marginBottom: 0, fontSize: '0.9rem', fontWeight: 700, color: 'var(--text-main)' }}>
+                        Interactive Action Buttons ({templateButtons.length}/5)
+                      </label>
+                      <p style={{ fontSize: '0.74rem', color: 'var(--text-muted)' }}>
+                        Add Quick-Reply (inbound leads), Website links, or direct 1-tap phone call buttons
+                      </p>
+                    </div>
+
+                    <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                      <button
+                        type="button"
+                        onClick={() => handleAddButton('URL')}
+                        disabled={templateButtons.length >= 5}
+                        className="btn btn-secondary btn-sm"
+                        title="Add Visit Website Button"
+                      >
+                        <Globe size={13} color="#0284c7" />
+                        <span>+ Visit Website</span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleAddButton('PHONE_NUMBER')}
+                        disabled={templateButtons.length >= 5}
+                        className="btn btn-secondary btn-sm"
+                        title="Add Direct Call Button"
+                      >
+                        <PhoneCall size={13} color="#059669" />
+                        <span>+ Direct Call</span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleAddButton('QUICK_REPLY')}
+                        disabled={templateButtons.length >= 5}
+                        className="btn btn-secondary btn-sm"
+                        title="Add Quick Reply Button"
+                      >
+                        <Plus size={13} color="#d97706" />
+                        <span>+ Quick Reply</span>
+                      </button>
+                    </div>
                   </div>
-                  <div className="form-group">
-                    <label className="form-label">Interactive Button 2</label>
-                    <input
-                      type="text"
-                      className="form-input"
-                      value={btn2Text}
-                      onChange={(e) => setBtn2Text(e.target.value)}
-                      placeholder="e.g. 📞 Request Callback"
-                    />
+
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                    {templateButtons.map((btn) => (
+                      <div
+                        key={btn.id}
+                        style={{
+                          padding: '12px 16px',
+                          background: '#f8fafc',
+                          borderRadius: 'var(--radius-md)',
+                          border: '1px solid var(--border-subtle)',
+                        }}
+                      >
+                        <div style={{ display: 'grid', gridTemplateColumns: '150px 1fr auto', gap: '10px', alignItems: 'center' }}>
+                          <select
+                            className="form-select"
+                            value={btn.type}
+                            onChange={(e) =>
+                              handleUpdateButton(btn.id, {
+                                type: e.target.value as any,
+                                url: e.target.value === 'URL' ? (btn.url || 'https://') : undefined,
+                                phoneNumber: e.target.value === 'PHONE_NUMBER' ? (btn.phoneNumber || '+91') : undefined,
+                              })
+                            }
+                            style={{ padding: '7px 10px', fontSize: '0.82rem' }}
+                          >
+                            <option value="QUICK_REPLY">⚡ Quick Reply</option>
+                            <option value="URL">🌐 Visit Website</option>
+                            <option value="PHONE_NUMBER">📞 Direct Call</option>
+                          </select>
+
+                          <input
+                            type="text"
+                            className="form-input"
+                            placeholder="Button Display Text"
+                            value={btn.text}
+                            onChange={(e) => handleUpdateButton(btn.id, { text: e.target.value })}
+                            style={{ padding: '7px 12px', fontSize: '0.84rem' }}
+                            required
+                          />
+
+                          <button
+                            type="button"
+                            onClick={() => handleRemoveButton(btn.id)}
+                            style={{ background: 'transparent', border: 'none', color: '#e11d48', cursor: 'pointer', padding: '6px' }}
+                            title="Remove Button"
+                          >
+                            <Trash2 size={16} />
+                          </button>
+                        </div>
+
+                        {btn.type === 'URL' && (
+                          <div style={{ marginTop: '8px' }}>
+                            <label style={{ fontSize: '0.74rem', color: 'var(--text-muted)', display: 'block', marginBottom: '3px' }}>
+                              Website Target URL (e.g. https://yourdomain.com)
+                            </label>
+                            <input
+                              type="url"
+                              className="form-input"
+                              placeholder="https://example.com"
+                              value={btn.url || ''}
+                              onChange={(e) => handleUpdateButton(btn.id, { url: e.target.value })}
+                              style={{ padding: '7px 10px', fontSize: '0.82rem' }}
+                              required
+                            />
+                          </div>
+                        )}
+
+                        {btn.type === 'PHONE_NUMBER' && (
+                          <div style={{ marginTop: '8px' }}>
+                            <label style={{ fontSize: '0.74rem', color: 'var(--text-muted)', display: 'block', marginBottom: '3px' }}>
+                              Phone Number with Country Code (e.g. +919876543210)
+                            </label>
+                            <input
+                              type="tel"
+                              className="form-input"
+                              placeholder="+919876543210"
+                              value={btn.phoneNumber || ''}
+                              onChange={(e) => handleUpdateButton(btn.id, { phoneNumber: e.target.value })}
+                              style={{ padding: '7px 10px', fontSize: '0.82rem' }}
+                              required
+                            />
+                          </div>
+                        )}
+                      </div>
+                    ))}
                   </div>
                 </div>
 
@@ -1449,13 +1618,28 @@ export default function DeveloperCampaignHQ() {
                     </div>
 
                     <div className="wa-btn-container">
-                      {btn1Text && <div className="wa-btn-item">{btn1Text}</div>}
-                      {btn2Text && <div className="wa-btn-item">{btn2Text}</div>}
+                      {templateButtons.map((btn) => (
+                        <div key={btn.id} className="wa-btn-item">
+                          {btn.type === 'URL' ? (
+                            <>
+                              <ExternalLink size={12} />
+                              <span>{btn.text}</span>
+                            </>
+                          ) : btn.type === 'PHONE_NUMBER' ? (
+                            <>
+                              <PhoneCall size={12} />
+                              <span>{btn.text}</span>
+                            </>
+                          ) : (
+                            <span>{btn.text}</span>
+                          )}
+                        </div>
+                      ))}
                     </div>
                   </div>
 
                   <div className="wa-reply-bubble">
-                    <p>{btn1Text || '🔥 I am Interested'}</p>
+                    <p>{templateButtons[0]?.text || '🔥 I am Interested'}</p>
                     <div style={{ fontSize: '0.66rem', opacity: 0.8, textAlign: 'right', marginTop: '2px' }}>
                       12:02 PM • Read
                     </div>
