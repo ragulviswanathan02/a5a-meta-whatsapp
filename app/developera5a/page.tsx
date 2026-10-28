@@ -660,7 +660,7 @@ export default function DeveloperCampaignHQ() {
 
         {/* TAB 2: META TEMPLATE STUDIO */}
         {activeTab === 'templates' && (
-          <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 0.8fr', gap: '28px', alignItems: 'flex-start' }}>
+          <div className="responsive-grid-split" style={{ display: 'grid', gridTemplateColumns: '1.2fr 0.8fr', gap: '28px', alignItems: 'flex-start' }}>
             {/* Template Editor Form */}
             <div className="glass-panel" style={{ padding: '24px 28px' }}>
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '20px' }}>
@@ -995,7 +995,7 @@ export default function DeveloperCampaignHQ() {
 
         {/* TAB 4: META CREDENTIALS & WEBHOOK CONFIG */}
         {activeTab === 'credentials' && (
-          <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 0.8fr', gap: '28px' }}>
+          <div className="responsive-grid-split" style={{ display: 'grid', gridTemplateColumns: '1.2fr 0.8fr', gap: '28px' }}>
             <div className="glass-panel" style={{ padding: '24px 28px' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '20px' }}>
                 <div style={{ width: '38px', height: '38px', borderRadius: '10px', background: 'rgba(37, 211, 102, 0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--wa-green)' }}>
