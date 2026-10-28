@@ -5,7 +5,8 @@ import {
   MetaCredentials, 
   WhatsAppTemplate, 
   ContactGroup, 
-  Contact 
+  Contact,
+  FormLead
 } from './types';
 
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://mffspcgphpygesrfntaj.supabase.co';
@@ -83,6 +84,16 @@ export async function dbUpsertLead(lead: Lead): Promise<boolean> {
     return !error;
   } catch (err) {
     console.warn('[Supabase dbUpsertLead Error]', err);
+    return false;
+  }
+}
+
+export async function dbDeleteLead(leadId: string): Promise<boolean> {
+  try {
+    const { error } = await supabase.from('leads').delete().eq('id', leadId);
+    return !error;
+  } catch (err) {
+    console.warn('[Supabase dbDeleteLead Error]', err);
     return false;
   }
 }
@@ -303,3 +314,74 @@ export async function dbDeleteContact(contactId: string): Promise<boolean> {
     return false;
   }
 }
+
+// ==========================================
+// FORM LEADS (Student Inquiries & Social Media Bio Leads)
+// ==========================================
+export async function dbGetFormLeads(): Promise<FormLead[]> {
+  try {
+    const { data, error } = await supabase
+      .from('form_leads')
+      .select('*')
+      .order('created_at', { ascending: false });
+
+    if (error || !data) return [];
+
+    return data.map((row) => ({
+      id: row.id,
+      name: row.name,
+      email: row.email,
+      phone: row.phone,
+      collegeName: row.college_name,
+      department: row.department,
+      yearOfStudy: row.year_of_study,
+      courseInterest: row.course_interest || undefined,
+      city: row.city || undefined,
+      source: row.source || undefined,
+      status: row.status || 'new',
+      notes: row.notes || [],
+      createdAt: row.created_at,
+      updatedAt: row.updated_at,
+    }));
+  } catch (err) {
+    console.warn('[Supabase dbGetFormLeads Error]', err);
+    return [];
+  }
+}
+
+export async function dbUpsertFormLead(lead: FormLead): Promise<boolean> {
+  try {
+    const payload = {
+      id: lead.id,
+      name: lead.name,
+      email: lead.email,
+      phone: lead.phone,
+      college_name: lead.collegeName,
+      department: lead.department,
+      year_of_study: lead.yearOfStudy,
+      course_interest: lead.courseInterest || null,
+      city: lead.city || null,
+      source: lead.source || null,
+      status: lead.status || 'new',
+      notes: lead.notes || [],
+      updated_at: new Date().toISOString(),
+    };
+
+    const { error } = await supabase.from('form_leads').upsert(payload);
+    return !error;
+  } catch (err) {
+    console.warn('[Supabase dbUpsertFormLead Error]', err);
+    return false;
+  }
+}
+
+export async function dbDeleteFormLead(leadId: string): Promise<boolean> {
+  try {
+    const { error } = await supabase.from('form_leads').delete().eq('id', leadId);
+    return !error;
+  } catch (err) {
+    console.warn('[Supabase dbDeleteFormLead Error]', err);
+    return false;
+  }
+}
+

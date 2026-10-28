@@ -133,3 +133,19 @@ export interface AuthState {
   developerAuthed: boolean;
 }
 
+export interface FormLead {
+  id: string;
+  name: string;
+  email: string;
+  phone: string;
+  collegeName: string;
+  department: string;
+  yearOfStudy: string; // '1st Year' | '2nd Year' | '3rd Year' | 'Final Year' | 'Passed Out' | 'Working Professional'
+  courseInterest?: string;
+  city?: string;
+  source?: string; // 'instagram' | 'youtube' | 'website' | 'other'
+  status: 'new' | 'contacted' | 'counseled' | 'enrolled' | 'lost';
+  notes?: LeadNote[];
+  createdAt: string;
+  updatedAt: string;
+}

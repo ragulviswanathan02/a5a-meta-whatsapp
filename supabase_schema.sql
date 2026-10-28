@@ -113,3 +113,25 @@ CREATE POLICY "Public access campaigns" ON campaigns FOR ALL USING (true) WITH C
 
 DROP POLICY IF EXISTS "Public access leads" ON leads;
 CREATE POLICY "Public access leads" ON leads FOR ALL USING (true) WITH CHECK (true);
+
+-- 7. Student Form Leads Table (Public Social Media & Bio Form Inquiries)
+CREATE TABLE IF NOT EXISTS form_leads (
+  id TEXT PRIMARY KEY,
+  name TEXT NOT NULL,
+  email TEXT NOT NULL,
+  phone TEXT NOT NULL,
+  college_name TEXT NOT NULL,
+  department TEXT NOT NULL,
+  year_of_study TEXT NOT NULL,
+  course_interest TEXT,
+  city TEXT,
+  source TEXT,
+  status TEXT DEFAULT 'new',
+  notes JSONB DEFAULT '[]'::jsonb,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+ALTER TABLE form_leads ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "Public access form_leads" ON form_leads;
+CREATE POLICY "Public access form_leads" ON form_leads FOR ALL USING (true) WITH CHECK (true);

@@ -1,10 +1,11 @@
-import { Campaign, Lead, MetaCredentials, WhatsAppTemplate, ContactGroup, Contact } from './types';
+import { Campaign, Lead, MetaCredentials, WhatsAppTemplate, ContactGroup, Contact, FormLead } from './types';
 
 const STORAGE_KEYS = {
   CREDENTIALS: 'a5a_meta_credentials',
   TEMPLATES: 'a5a_meta_templates',
   CAMPAIGNS: 'a5a_meta_campaigns',
   LEADS: 'a5a_meta_leads',
+  FORM_LEADS: 'a5a_meta_form_leads',
   GROUPS: 'a5a_meta_contact_groups',
   CONTACTS: 'a5a_meta_contacts',
   LIVE_INITIALIZED: 'a5a_live_clean_v1',
@@ -22,6 +23,7 @@ export const INITIAL_CREDENTIALS: MetaCredentials = {
 export const INITIAL_TEMPLATES: WhatsAppTemplate[] = [];
 export const INITIAL_CAMPAIGNS: Campaign[] = [];
 export const INITIAL_LEADS: Lead[] = [];
+export const INITIAL_FORM_LEADS: FormLead[] = [];
 export const INITIAL_CONTACT_GROUPS: ContactGroup[] = [];
 export const INITIAL_CONTACTS: Contact[] = [];
 
@@ -87,6 +89,18 @@ export function getStoredLeads(): Lead[] {
 export function saveStoredLeads(leads: Lead[]): void {
   if (typeof window === 'undefined') return;
   localStorage.setItem(STORAGE_KEYS.LEADS, JSON.stringify(leads));
+}
+
+// Student Form Leads
+export function getStoredFormLeads(): FormLead[] {
+  if (typeof window === 'undefined') return INITIAL_FORM_LEADS;
+  const data = localStorage.getItem(STORAGE_KEYS.FORM_LEADS);
+  return data ? JSON.parse(data) : INITIAL_FORM_LEADS;
+}
+
+export function saveStoredFormLeads(formLeads: FormLead[]): void {
+  if (typeof window === 'undefined') return;
+  localStorage.setItem(STORAGE_KEYS.FORM_LEADS, JSON.stringify(formLeads));
 }
 
 // Contact Groups

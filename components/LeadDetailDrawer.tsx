@@ -15,7 +15,8 @@ import {
   Flame, 
   Sparkles,
   ExternalLink,
-  ChevronRight
+  ChevronRight,
+  Trash2
 } from 'lucide-react';
 import { Lead } from '@/lib/types';
 import { getStoredCredentials } from '@/lib/storage';
@@ -25,6 +26,7 @@ interface LeadDetailDrawerProps {
   lead: Lead | null;
   onClose: () => void;
   onUpdateLead: (updated: Lead) => void;
+  onDeleteLead?: (leadId: string) => void;
 }
 
 export const STATUS_LABELS: Record<string, { label: string; badgeClass: string }> = {
@@ -40,6 +42,7 @@ export default function LeadDetailDrawer({
   lead,
   onClose,
   onUpdateLead,
+  onDeleteLead,
 }: LeadDetailDrawerProps) {
   const [activeTab, setActiveTab] = useState<'chat' | 'notes' | 'info'>('chat');
   const [replyText, setReplyText] = useState('');
@@ -176,12 +179,42 @@ export default function LeadDetailDrawer({
               </div>
             </div>
 
-            <button
-              onClick={onClose}
-              style={{ background: 'transparent', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', padding: '4px' }}
-            >
-              <X size={22} />
-            </button>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              {onDeleteLead && (
+                <button
+                  onClick={() => {
+                    if (window.confirm(`Are you sure you want to delete lead "${lead.name}"? This will permanently remove it.`)) {
+                      onDeleteLead(lead.id);
+                      onClose();
+                    }
+                  }}
+                  style={{
+                    background: '#fef2f2',
+                    border: '1px solid #fee2e2',
+                    color: '#ef4444',
+                    borderRadius: '8px',
+                    cursor: 'pointer',
+                    padding: '6px 10px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    fontSize: '0.78rem',
+                    fontWeight: 600
+                  }}
+                  title="Delete Lead"
+                >
+                  <Trash2 size={14} />
+                  <span>Delete</span>
+                </button>
+              )}
+
+              <button
+                onClick={onClose}
+                style={{ background: 'transparent', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', padding: '4px' }}
+              >
+                <X size={22} />
+              </button>
+            </div>
           </div>
 
           {/* Quick Action Buttons */}
