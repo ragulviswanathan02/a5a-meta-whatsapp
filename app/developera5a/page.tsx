@@ -129,7 +129,7 @@ export default function DeveloperCampaignHQ() {
   const [headerType, setHeaderType] = useState<'TEXT' | 'NONE'>('TEXT');
   const [headerText, setHeaderText] = useState('Exclusive Privilege for {{1}}');
   const [bodyText, setBodyText] = useState('Hello {{1}}, we are pleased to offer you special access to {{2}}.\n\nTap below if you are interested.');
-  const [footerText, setFooterText] = useState('A5A Meta Solutions');
+  const [footerText, setFooterText] = useState('A5 Automation');
   const [sampleVars, setSampleVars] = useState<Record<string, string>>({
     '1': 'John Doe',
     '2': 'VIP Launch Package',
@@ -137,7 +137,7 @@ export default function DeveloperCampaignHQ() {
   const [templateButtons, setTemplateButtons] = useState<TemplateButtonConfig[]>([
     { id: 'btn-1', type: 'QUICK_REPLY', text: '🔥 I am Interested' },
     { id: 'btn-2', type: 'QUICK_REPLY', text: '📞 Request Call Back' },
-    { id: 'btn-3', type: 'URL', text: '🌐 Visit Website', url: 'https://a5ameta.com' },
+    { id: 'btn-3', type: 'URL', text: '🌐 Visit Website', url: 'https://a5automation.com' },
   ]);
   const [templateStatusToast, setTemplateStatusToast] = useState('');
 
@@ -284,7 +284,7 @@ export default function DeveloperCampaignHQ() {
       lastChecked: new Date().toISOString(),
       phoneDetails: result.data ? {
         display_phone_number: result.data.display_phone_number || 'N/A',
-        verified_name: result.data.verified_name || 'A5A Meta Business',
+        verified_name: result.data.verified_name || 'A5 Automation',
         quality_rating: result.data.quality_rating || 'GREEN',
         code_verification_status: result.data.code_verification_status || 'VERIFIED',
       } : undefined,
@@ -1661,12 +1661,12 @@ export default function DeveloperCampaignHQ() {
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img
                     src="/logo.jpg"
-                    alt="A5A Logo"
+                    alt="A5 Automation Logo"
                     style={{ width: '32px', height: '32px', borderRadius: '50%', objectFit: 'cover' }}
                     onError={(e) => ((e.target as HTMLElement).style.display = 'none')}
                   />
                   <div style={{ flex: 1 }}>
-                    <div style={{ fontSize: '0.86rem', fontWeight: 700 }}>A5A Business Verified</div>
+                    <div style={{ fontSize: '0.86rem', fontWeight: 700 }}>A5 Automation Verified</div>
                     <div style={{ fontSize: '0.68rem', color: '#8696a0' }}>Official WhatsApp Account</div>
                   </div>
                 </div>
@@ -1912,7 +1912,7 @@ export default function DeveloperCampaignHQ() {
                   <div style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 0' }}>
                     <span style={{ color: 'var(--text-muted)' }}>Verified Display Name:</span>
                     <span style={{ color: 'var(--text-main)', fontWeight: 600 }}>
-                      {creds.phoneDetails?.verified_name || 'A5A Solutions'}
+                      {creds.phoneDetails?.verified_name || 'A5 Automation'}
                     </span>
                   </div>
                 </div>

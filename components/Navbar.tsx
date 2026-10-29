@@ -45,7 +45,7 @@ export default function Navbar({ portal, onOpenChangePassword, onLogout }: Navba
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img 
                 src="/logo.jpg" 
-                alt="A5A Logo" 
+                alt="A5 Automation Logo" 
                 style={{ width: '100%', height: '100%', objectFit: 'contain' }}
                 onError={(e) => {
                   (e.target as HTMLElement).style.display = 'none';
@@ -54,7 +54,7 @@ export default function Navbar({ portal, onOpenChangePassword, onLogout }: Navba
             </div>
             <div>
               <div className="brand-title">
-                A5A <span style={{ color: 'var(--wa-green)' }}>Meta</span>
+                A5 <span style={{ color: 'var(--wa-green)' }}>Automation</span>
                 <span className="brand-badge">WhatsApp Cloud API</span>
               </div>
               <p style={{ fontSize: '0.74rem', color: 'var(--text-muted)', letterSpacing: '0.01em' }}>

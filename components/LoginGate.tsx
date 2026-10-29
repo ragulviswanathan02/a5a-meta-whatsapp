@@ -72,7 +72,7 @@ export default function LoginGate({ portal, onSuccess }: LoginGateProps) {
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img 
               src="/logo.jpg" 
-              alt="A5A Logo" 
+              alt="A5 Automation Logo" 
               style={{ width: '100%', height: '100%', objectFit: 'contain' }}
               onError={(e) => {
                 (e.target as HTMLElement).style.display = 'none';

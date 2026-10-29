@@ -213,7 +213,7 @@ function LeadCaptureFormContent() {
 
           {/* Direct WhatsApp Call to Action */}
           <a
-            href={`https://wa.me/917358289166?text=Hi%20A5A%20Automation%2C%20I%20am%20${encodeURIComponent(formData.name)}%20from%20${encodeURIComponent(formData.collegeName)}.%20I%20just%20filled%20the%20application%20form%20for%20Industrial%20Automation%20training%20and%20wanted%20to%20connect!`}
+            href={`https://wa.me/917358289166?text=Hi%20A5%20Automation%2C%20I%20am%20${encodeURIComponent(formData.name)}%20from%20${encodeURIComponent(formData.collegeName)}.%20I%20just%20filled%20the%20application%20form%20for%20Industrial%20Automation%20training%20and%20wanted%20to%20connect!`}
             target="_blank"
             rel="noopener noreferrer"
             className="btn btn-primary"
@@ -232,7 +232,7 @@ function LeadCaptureFormContent() {
             }}
           >
             <MessageCircle size={20} />
-            Chat with A5A Team on WhatsApp (+91 73582 89166)
+            Chat with A5 Automation Team on WhatsApp (+91 73582 89166)
           </a>
 
           <div style={{ marginTop: '20px' }}>
@@ -267,7 +267,7 @@ function LeadCaptureFormContent() {
 
         {/* Footer info */}
         <div style={{ textAlign: 'center', marginTop: '24px', color: '#94a3b8', fontSize: '0.82rem' }}>
-          &copy; {new Date().getFullYear()} A5A Automation • Advanced Analytical Accessible Affirmative Academy
+          &copy; {new Date().getFullYear()} A5 Automation • Industrial Training & Placement
         </div>
       </div>
     );
@@ -291,7 +291,7 @@ function LeadCaptureFormContent() {
           <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '14px' }}>
             <img 
               src="https://a5automation.com/wp-content/uploads/2026/04/A5A-Automation-Industrial-Training-logo.png" 
-              alt="A5A Automation Logo" 
+              alt="A5 Automation Logo" 
               style={{ maxHeight: '72px', width: 'auto', objectFit: 'contain' }}
             />
           </div>
@@ -309,7 +309,7 @@ function LeadCaptureFormContent() {
             marginBottom: '12px'
           }}>
             <Sparkles size={14} />
-            <span>A5A ACADEMY • INDUSTRIAL AUTOMATION & PLACEMENT</span>
+            <span>A5 AUTOMATION • INDUSTRIAL TRAINING & PLACEMENT</span>
           </div>
 
           <h1 style={{ fontSize: '1.65rem', fontWeight: 800, color: '#0f172a', lineHeight: 1.3, marginBottom: '8px' }}>
@@ -598,9 +598,9 @@ function LeadCaptureFormContent() {
 
         {/* Footer */}
         <div style={{ textAlign: 'center', marginTop: '30px', color: '#64748b', fontSize: '0.82rem', lineHeight: 1.6 }}>
-          <div style={{ fontWeight: 700, color: '#334155' }}>A5A Automation Industrial Training Center</div>
-          <div>Salem, Tamil Nadu • Advanced Analytical Accessible Affirmative Academy</div>
-          <div style={{ marginTop: '4px', color: '#94a3b8' }}>&copy; {new Date().getFullYear()} A5A Automation. All rights reserved.</div>
+          <div style={{ fontWeight: 700, color: '#334155' }}>A5 Automation Industrial Training Center</div>
+          <div>Salem, Tamil Nadu</div>
+          <div style={{ marginTop: '4px', color: '#94a3b8' }}>&copy; {new Date().getFullYear()} A5 Automation. All rights reserved.</div>
         </div>
 
       </div>
@@ -614,7 +614,7 @@ export default function LeadCaptureFormPage() {
       <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#f8fafc' }}>
         <div style={{ textAlign: 'center', color: '#059669' }}>
           <div className="spinner" style={{ margin: '0 auto 16px' }} />
-          <p style={{ fontWeight: 600 }}>Loading A5A Application Portal...</p>
+          <p style={{ fontWeight: 600 }}>Loading A5 Automation Application Portal...</p>
         </div>
       </div>
     }>

@@ -2,7 +2,7 @@ import type { Metadata } from 'next';
 import './globals.css';
 
 export const metadata: Metadata = {
-  title: 'A5A Meta • WhatsApp Campaigns & Lead Command Center',
+  title: 'A5 Automation • WhatsApp Campaigns & Lead Command Center',
   description: 'Enterprise Meta WhatsApp Cloud API Campaign Broadcaster, Template Studio & Real-time Lead Generation CRM',
 };
 

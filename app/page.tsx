@@ -1083,7 +1083,7 @@ export default function LeadsDashboard() {
                     filteredFormLeads.map((fl) => {
                       const cleanPhone = fl.phone.replace(/[^0-9]/g, '');
                       const whatsappText = encodeURIComponent(
-                        `Hello ${fl.name}, thank you for registering with A5A Automation for Industrial Training! We received your application from ${fl.collegeName} (${fl.department}). How can we help you regarding your training & placement?`
+                        `Hello ${fl.name}, thank you for registering with A5 Automation for Industrial Training! We received your application from ${fl.collegeName} (${fl.department}). How can we help you regarding your training & placement?`
                       );
 
                       return (
@@ -1190,7 +1190,7 @@ export default function LeadsDashboard() {
                               </a>
 
                               <a
-                                href={`mailto:${fl.email}?subject=A5A%20Automation%20Training%20Inquiry`}
+                                href={`mailto:${fl.email}?subject=A5%20Automation%20Training%20Inquiry`}
                                 className="btn btn-secondary btn-sm"
                                 title="Send Email"
                               >
