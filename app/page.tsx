@@ -329,7 +329,7 @@ export default function LeadsDashboard() {
   };
 
   const handleCopyFormLink = () => {
-    const url = typeof window !== 'undefined' ? `${window.location.origin}/form` : 'https://a5ameta.vercel.app/form';
+    const url = typeof window !== 'undefined' ? `${window.location.origin}/form` : 'https://a5automation.com/form';
     navigator.clipboard.writeText(url);
     setCopiedLink(true);
     setTimeout(() => setCopiedLink(false), 2500);
@@ -1075,7 +1075,7 @@ export default function LeadsDashboard() {
                         </div>
                         <div style={{ fontWeight: 600, color: '#64748b', fontSize: '0.95rem' }}>No student form leads captured yet</div>
                         <div style={{ fontSize: '0.82rem', color: '#94a3b8', marginTop: '4px' }}>
-                          Share your form link <code style={{ background: '#f1f5f9', padding: '2px 6px', borderRadius: '4px' }}>https://a5ameta.vercel.app/form</code> on social media videos to start collecting inquiries!
+                          Share your form link <code style={{ background: '#f1f5f9', padding: '2px 6px', borderRadius: '4px' }}>https://a5automation.com/form</code> on social media videos to start collecting inquiries!
                         </div>
                       </td>
                     </tr>

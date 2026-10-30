@@ -1928,7 +1928,7 @@ export default function DeveloperCampaignHQ() {
                 </p>
 
                 <div style={{ padding: '10px 12px', background: '#f8fafc', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border-subtle)', fontFamily: 'monospace', fontSize: '0.78rem', color: 'var(--wa-green-dark)', wordBreak: 'break-all' }}>
-                  https://your-project.vercel.app/api/webhook
+                  {typeof window !== 'undefined' ? `${window.location.origin}/api/webhook` : 'https://leads.a5automation.com/api/webhook'}
                 </div>
 
                 <div style={{ marginTop: '12px', fontSize: '0.76rem', color: 'var(--text-muted)' }}>
