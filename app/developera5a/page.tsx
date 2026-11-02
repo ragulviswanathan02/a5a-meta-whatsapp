@@ -459,36 +459,65 @@ export default function DeveloperCampaignHQ() {
           return;
         }
 
-        // Determine column mapping
-        let phoneCol = 0;
-        let nameCol = 1;
-        let emailCol = 2;
-        let cityCol = 3;
-        let tagCol = 4;
+        // Determine column mapping with high-priority matching
+        let phoneCol = -1;
+        let altPhoneCol = -1;
+        let nameCol = -1;
+        let emailCol = -1;
+        let cityCol = -1;
+        let collegeCol = -1;
+        let branchCol = -1;
         let startRow = 0;
 
         const firstRow = rawRows[0].map((c) => String(c || '').toLowerCase().trim());
         const hasHeader = firstRow.some((col) =>
           col.includes('phone') || col.includes('mobile') || col.includes('number') ||
-          col.includes('contact') || col.includes('name') || col.includes('email')
+          col.includes('contact') || col.includes('name') || col.includes('email') || col.includes('s.no')
         );
 
         if (hasHeader) {
           startRow = 1;
           firstRow.forEach((col, idx) => {
-            if (col.includes('phone') || col.includes('mobile') || col.includes('number') || col.includes('contact') || col.includes('whatsapp')) {
-              phoneCol = idx;
-            } else if (col.includes('name') || col.includes('student') || col.includes('candidate')) {
+            // Student Name (Do not let College Name / Company Name overwrite student name)
+            if (col === 'student name' || col === 'full name' || col === 'candidate name' || col === 'name') {
               nameCol = idx;
-            } else if (col.includes('email') || col.includes('mail')) {
-              emailCol = idx;
-            } else if (col.includes('city') || col.includes('location') || col.includes('district') || col.includes('place')) {
-              cityCol = idx;
-            } else if (col.includes('tag') || col.includes('dept') || col.includes('department') || col.includes('branch') || col.includes('course')) {
-              tagCol = idx;
+            } else if (nameCol === -1 && col.includes('name') && !col.includes('college') && !col.includes('company') && !col.includes('school')) {
+              nameCol = idx;
+            } else if (col.includes('college') || col.includes('institute') || col.includes('university')) {
+              collegeCol = idx;
+            }
+
+            // Primary Mobile / Phone (Do not let Alternate Mobile overwrite primary mobile)
+            if (col === 'mobile' || col === 'phone' || col === 'whatsapp' || col === 'contact') {
+              phoneCol = idx;
+            } else if (phoneCol === -1 && (col.includes('mobile') || col.includes('phone') || col.includes('contact') || col.includes('whatsapp')) && !col.includes('alt') && !col.includes('secondary')) {
+              phoneCol = idx;
+            } else if (col.includes('alt') || col.includes('secondary')) {
+              altPhoneCol = idx;
+            }
+
+            // Email
+            if (col.includes('email') || col.includes('mail')) {
+              if (emailCol === -1 || col === 'email') emailCol = idx;
+            }
+
+            // City
+            if (col.includes('city') || col.includes('location') || col.includes('district') || col.includes('place')) {
+              if (cityCol === -1 || col === 'city') cityCol = idx;
+            }
+
+            // Branch / Department
+            if (col.includes('branch') || col.includes('dept') || col.includes('department') || col.includes('course')) {
+              if (branchCol === -1) branchCol = idx;
             }
           });
         }
+
+        // Fallbacks if not matched by headers
+        if (phoneCol === -1) phoneCol = 0;
+        if (nameCol === -1) nameCol = 1;
+        if (emailCol === -1) emailCol = 2;
+        if (cityCol === -1) cityCol = 3;
 
         const assignedGroup = groups.find((g) => g.id === bulkGroupId) || groups[0];
         const parsedList: Contact[] = [];
@@ -497,22 +526,46 @@ export default function DeveloperCampaignHQ() {
           const row = rawRows[i];
           if (!row || row.length === 0) continue;
 
-          const rawPhone = String(row[phoneCol] || '').trim();
-          const cleanPhone = rawPhone.replace(/[^0-9+]/g, '');
-          if (!cleanPhone || cleanPhone.length < 8) continue; // Skip blank or invalid phone rows
+          // Check primary phone, then alternate phone
+          let rawPhone = phoneCol !== -1 && row[phoneCol] ? String(row[phoneCol]).trim() : '';
+          if (!rawPhone && altPhoneCol !== -1 && row[altPhoneCol]) {
+            rawPhone = String(row[altPhoneCol]).trim();
+          }
 
-          const name = row[nameCol] ? String(row[nameCol]).trim() : `Contact ${parsedList.length + 1}`;
-          const email = row[emailCol] ? String(row[emailCol]).trim() : undefined;
-          const city = row[cityCol] ? String(row[cityCol]).trim() : undefined;
-          const tag = row[tagCol] ? String(row[tagCol]).trim() : undefined;
+          const cleanDigits = rawPhone.replace(/[^0-9]/g, '');
+          if (!cleanDigits || cleanDigits.length < 10) continue; // Skip blank or invalid phone rows
+
+          // Format clean Phone with country code
+          const formattedPhone = cleanDigits.length === 10 ? `+91${cleanDigits}` : `+${cleanDigits}`;
+
+          const name = nameCol !== -1 && row[nameCol] && String(row[nameCol]).toLowerCase() !== 'unspecified'
+            ? String(row[nameCol]).trim()
+            : `Student ${parsedList.length + 1}`;
+
+          const email = emailCol !== -1 && row[emailCol] && String(row[emailCol]).toLowerCase() !== 'unspecified'
+            ? String(row[emailCol]).trim()
+            : undefined;
+
+          const city = cityCol !== -1 && row[cityCol] && String(row[cityCol]).toLowerCase() !== 'unspecified'
+            ? String(row[cityCol]).trim()
+            : undefined;
+
+          // Build tags from branch and college if present
+          const tags: string[] = [];
+          if (branchCol !== -1 && row[branchCol] && String(row[branchCol]).toLowerCase() !== 'unspecified') {
+            tags.push(String(row[branchCol]).trim());
+          }
+          if (collegeCol !== -1 && row[collegeCol] && String(row[collegeCol]).toLowerCase() !== 'unspecified') {
+            tags.push(String(row[collegeCol]).trim());
+          }
 
           parsedList.push({
             id: `cnt-${Date.now()}-${parsedList.length}`,
-            phone: cleanPhone,
+            phone: formattedPhone,
             name,
             email,
             city,
-            tags: tag ? [tag] : [],
+            tags,
             groupId: assignedGroup ? assignedGroup.id : 'default',
             groupName: assignedGroup ? assignedGroup.name : 'General',
             createdAt: new Date().toISOString(),
