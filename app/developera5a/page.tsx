@@ -34,8 +34,10 @@ import {
   PhoneCall,
   ExternalLink,
   PlusCircle,
-  Image as ImageIcon
+  Image as ImageIcon,
+  FileSpreadsheet
 } from 'lucide-react';
+import * as XLSX from 'xlsx';
 
 export interface TemplateButtonConfig {
   id: string;
@@ -427,6 +429,145 @@ export default function DeveloperCampaignHQ() {
     setSingleTag('');
     setContactFeedback(`Contact added to "${newContact.groupName}"!`);
     setTimeout(() => setContactFeedback(''), 3000);
+  };
+
+  const excelFileRef = React.useRef<HTMLInputElement | null>(null);
+  const [excelImporting, setExcelImporting] = useState(false);
+  const [excelPreview, setExcelPreview] = useState<{
+    fileName: string;
+    contacts: Contact[];
+  } | null>(null);
+
+  const handleExcelFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setExcelImporting(true);
+    const reader = new FileReader();
+
+    reader.onload = (evt) => {
+      try {
+        const bstr = evt.target?.result;
+        const wb = XLSX.read(bstr, { type: 'binary' });
+        const firstSheetName = wb.SheetNames[0];
+        const ws = wb.Sheets[firstSheetName];
+        const rawRows: any[][] = XLSX.utils.sheet_to_json(ws, { header: 1 });
+
+        if (!rawRows || rawRows.length === 0) {
+          alert('The selected spreadsheet has no data rows.');
+          setExcelImporting(false);
+          return;
+        }
+
+        // Determine column mapping
+        let phoneCol = 0;
+        let nameCol = 1;
+        let emailCol = 2;
+        let cityCol = 3;
+        let tagCol = 4;
+        let startRow = 0;
+
+        const firstRow = rawRows[0].map((c) => String(c || '').toLowerCase().trim());
+        const hasHeader = firstRow.some((col) =>
+          col.includes('phone') || col.includes('mobile') || col.includes('number') ||
+          col.includes('contact') || col.includes('name') || col.includes('email')
+        );
+
+        if (hasHeader) {
+          startRow = 1;
+          firstRow.forEach((col, idx) => {
+            if (col.includes('phone') || col.includes('mobile') || col.includes('number') || col.includes('contact') || col.includes('whatsapp')) {
+              phoneCol = idx;
+            } else if (col.includes('name') || col.includes('student') || col.includes('candidate')) {
+              nameCol = idx;
+            } else if (col.includes('email') || col.includes('mail')) {
+              emailCol = idx;
+            } else if (col.includes('city') || col.includes('location') || col.includes('district') || col.includes('place')) {
+              cityCol = idx;
+            } else if (col.includes('tag') || col.includes('dept') || col.includes('department') || col.includes('branch') || col.includes('course')) {
+              tagCol = idx;
+            }
+          });
+        }
+
+        const assignedGroup = groups.find((g) => g.id === bulkGroupId) || groups[0];
+        const parsedList: Contact[] = [];
+
+        for (let i = startRow; i < rawRows.length; i++) {
+          const row = rawRows[i];
+          if (!row || row.length === 0) continue;
+
+          const rawPhone = String(row[phoneCol] || '').trim();
+          const cleanPhone = rawPhone.replace(/[^0-9+]/g, '');
+          if (!cleanPhone || cleanPhone.length < 8) continue; // Skip blank or invalid phone rows
+
+          const name = row[nameCol] ? String(row[nameCol]).trim() : `Contact ${parsedList.length + 1}`;
+          const email = row[emailCol] ? String(row[emailCol]).trim() : undefined;
+          const city = row[cityCol] ? String(row[cityCol]).trim() : undefined;
+          const tag = row[tagCol] ? String(row[tagCol]).trim() : undefined;
+
+          parsedList.push({
+            id: `cnt-${Date.now()}-${parsedList.length}`,
+            phone: cleanPhone,
+            name,
+            email,
+            city,
+            tags: tag ? [tag] : [],
+            groupId: assignedGroup ? assignedGroup.id : 'default',
+            groupName: assignedGroup ? assignedGroup.name : 'General',
+            createdAt: new Date().toISOString(),
+          });
+        }
+
+        if (parsedList.length === 0) {
+          alert('Could not detect valid phone numbers in this file. Please make sure there is a column with contact numbers.');
+          setExcelImporting(false);
+          return;
+        }
+
+        setExcelPreview({
+          fileName: file.name,
+          contacts: parsedList,
+        });
+      } catch (err: any) {
+        alert('Failed to parse file: ' + (err?.message || 'Unknown error'));
+      } finally {
+        setExcelImporting(false);
+      }
+    };
+
+    reader.readAsBinaryString(file);
+  };
+
+  const handleConfirmExcelImport = () => {
+    if (!excelPreview || excelPreview.contacts.length === 0) return;
+
+    const assignedGroup = groups.find((g) => g.id === bulkGroupId) || groups[0];
+    const updatedWithCurrentGroup = excelPreview.contacts.map((c) => ({
+      ...c,
+      groupId: assignedGroup ? assignedGroup.id : 'default',
+      groupName: assignedGroup ? assignedGroup.name : 'General',
+    }));
+
+    const nextContacts = [...updatedWithCurrentGroup, ...contacts];
+    setContacts(nextContacts);
+    saveStoredContacts(nextContacts);
+    dbUpsertContacts(updatedWithCurrentGroup);
+
+    if (assignedGroup) {
+      const updatedGroups = groups.map((g) =>
+        g.id === assignedGroup.id
+          ? { ...g, contactCount: g.contactCount + updatedWithCurrentGroup.length }
+          : g
+      );
+      setGroups(updatedGroups);
+      saveStoredContactGroups(updatedGroups);
+    }
+
+    setContactFeedback(`🎉 Successfully imported ${updatedWithCurrentGroup.length} contacts from ${excelPreview.fileName}!`);
+    setExcelPreview(null);
+    if (excelFileRef.current) excelFileRef.current.value = '';
+    setTimeout(() => setContactFeedback(''), 4500);
   };
 
   // Bulk CSV / Multi-line Contact Import
@@ -1262,14 +1403,15 @@ export default function DeveloperCampaignHQ() {
                   </button>
                 </form>
 
-                {/* Bulk CSV / Multi-Line Import Form */}
-                <form onSubmit={handleBulkImportContacts} style={{ padding: '20px', background: '#f8fafc', borderRadius: 'var(--radius-md)', border: '1px solid var(--border-subtle)' }}>
-                  <h4 style={{ fontSize: '0.98rem', fontWeight: 700, color: 'var(--text-main)', marginBottom: '14px' }}>
-                    Option 2: Bulk Multi-Line / CSV Paste
+                {/* Bulk Excel / CSV File Import & Multi-Line Form */}
+                <div style={{ padding: '20px', background: '#f8fafc', borderRadius: 'var(--radius-md)', border: '1px solid var(--border-subtle)' }}>
+                  <h4 style={{ fontSize: '0.98rem', fontWeight: 700, color: 'var(--text-main)', marginBottom: '14px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <FileSpreadsheet size={18} color="var(--wa-green)" />
+                    <span>Option 2: Import from Excel (.xlsx, .xls) or .CSV File</span>
                   </h4>
 
                   <div className="form-group">
-                    <label className="form-label">Assign to Group</label>
+                    <label className="form-label">Assign Imported Contacts to Group</label>
                     <select
                       className="form-select"
                       value={bulkGroupId}
@@ -1281,26 +1423,115 @@ export default function DeveloperCampaignHQ() {
                     </select>
                   </div>
 
-                  <div className="form-group">
-                    <label className="form-label">
-                      <span>Paste Contacts (Phone, Name, Email, City, Tag)</span>
-                      <span style={{ fontSize: '0.72rem', color: 'var(--text-dim)' }}>1 per line</span>
-                    </label>
-                    <textarea
-                      rows={5}
-                      className="form-textarea"
-                      placeholder="+919876543210, Arun Kumar, arun@mail.com, Chennai, VIP&#10;+919812345678, Priya Sharma, priya@mail.com, Delhi, Prime"
-                      value={bulkCsvText}
-                      onChange={(e) => setBulkCsvText(e.target.value)}
-                      required
-                    />
+                  {/* Hidden File Input for Excel/CSV */}
+                  <input
+                    type="file"
+                    ref={excelFileRef}
+                    accept=".xlsx, .xls, .csv"
+                    onChange={handleExcelFileSelect}
+                    style={{ display: 'none' }}
+                  />
+
+                  {/* Excel Upload Click Box */}
+                  <div
+                    onClick={() => excelFileRef.current?.click()}
+                    style={{
+                      border: '2px dashed #059669',
+                      borderRadius: '12px',
+                      padding: '20px 16px',
+                      textAlign: 'center',
+                      background: '#ecfdf5',
+                      cursor: 'pointer',
+                      marginBottom: '14px',
+                      transition: 'all 0.2s',
+                    }}
+                  >
+                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '6px' }}>
+                      <div style={{
+                        width: '44px',
+                        height: '44px',
+                        borderRadius: '50%',
+                        background: '#ffffff',
+                        color: '#059669',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        boxShadow: '0 2px 6px rgba(5, 150, 105, 0.15)'
+                      }}>
+                        <FileSpreadsheet size={22} />
+                      </div>
+                      <div style={{ fontWeight: 800, fontSize: '0.92rem', color: '#065f46' }}>
+                        {excelImporting ? 'Reading Excel Rows...' : 'Click to Select Excel (.xlsx, .xls) or .CSV File'}
+                      </div>
+                      <div style={{ fontSize: '0.74rem', color: '#047857' }}>
+                        Auto-detects columns: Phone, Name, Email, City, and Department / Tag
+                      </div>
+                    </div>
                   </div>
 
-                  <button type="submit" className="btn btn-primary" style={{ width: '100%' }}>
-                    <Upload size={16} />
-                    <span>Import All Lines</span>
-                  </button>
-                </form>
+                  {/* Excel Preview & Confirmation Card */}
+                  {excelPreview && (
+                    <div style={{
+                      background: '#ffffff',
+                      borderRadius: '10px',
+                      border: '1px solid #10b981',
+                      padding: '14px',
+                      marginBottom: '14px',
+                      boxShadow: '0 4px 12px rgba(16, 185, 129, 0.1)'
+                    }}>
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
+                        <span style={{ fontSize: '0.85rem', fontWeight: 700, color: '#065f46' }}>
+                          📄 {excelPreview.fileName}
+                        </span>
+                        <span className="badge badge-green">
+                          {excelPreview.contacts.length} Contacts Found
+                        </span>
+                      </div>
+
+                      <div style={{ fontSize: '0.76rem', color: '#64748b', marginBottom: '10px' }}>
+                        Previewing first {Math.min(3, excelPreview.contacts.length)} rows:
+                        <ul style={{ margin: '4px 0 0 16px', padding: 0 }}>
+                          {excelPreview.contacts.slice(0, 3).map((c, i) => (
+                            <li key={i}>
+                              <strong>{c.name}</strong> • {c.phone} {c.city ? `(${c.city})` : ''} {c.tags?.[0] ? `[${c.tags[0]}]` : ''}
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+
+                      <button
+                        type="button"
+                        onClick={handleConfirmExcelImport}
+                        className="btn btn-primary"
+                        style={{ width: '100%', padding: '10px' }}
+                      >
+                        <CheckCircle2 size={16} />
+                        <span>Confirm & Import {excelPreview.contacts.length} Contacts</span>
+                      </button>
+                    </div>
+                  )}
+
+                  {/* Collapsible / Alternative manual paste */}
+                  <details style={{ marginTop: '8px' }}>
+                    <summary style={{ fontSize: '0.78rem', color: '#64748b', cursor: 'pointer', fontWeight: 600 }}>
+                      Or manually paste lines / CSV text
+                    </summary>
+                    <form onSubmit={handleBulkImportContacts} style={{ marginTop: '10px' }}>
+                      <textarea
+                        rows={4}
+                        className="form-textarea"
+                        placeholder="+919876543210, Arun Kumar, arun@mail.com, Chennai, VIP&#10;+919812345678, Priya Sharma, priya@mail.com, Delhi, Prime"
+                        value={bulkCsvText}
+                        onChange={(e) => setBulkCsvText(e.target.value)}
+                        style={{ marginBottom: '8px' }}
+                      />
+                      <button type="submit" className="btn btn-secondary btn-sm" style={{ width: '100%' }}>
+                        <Upload size={14} />
+                        <span>Import Pasted Lines</span>
+                      </button>
+                    </form>
+                  </details>
+                </div>
               </div>
             </div>
 
