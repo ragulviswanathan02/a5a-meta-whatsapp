@@ -130,6 +130,50 @@ export default function DeveloperCampaignHQ() {
   const [headerType, setHeaderType] = useState<'TEXT' | 'IMAGE' | 'NONE'>('TEXT');
   const [headerText, setHeaderText] = useState('Exclusive Privilege for {{1}}');
   const [headerImageUrl, setHeaderImageUrl] = useState('https://a5automation.com/wp-content/uploads/2026/04/A5A-Automation-Industrial-Training-logo.png');
+  const [uploadingImage, setUploadingImage] = useState(false);
+  const [uploadedFileName, setUploadedFileName] = useState('');
+  const fileInputRef = React.useRef<HTMLInputElement | null>(null);
+
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (file.size > 5 * 1024 * 1024) {
+      alert('File size must be under 5MB');
+      return;
+    }
+
+    setUploadingImage(true);
+    setUploadedFileName(file.name);
+
+    const reader = new FileReader();
+    reader.onload = async () => {
+      const base64 = reader.result as string;
+      // Show immediately in phone mockup
+      setHeaderImageUrl(base64);
+
+      try {
+        const res = await fetch('/api/media', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            data: base64,
+            mimeType: file.type || 'image/jpeg',
+            fileName: file.name,
+          }),
+        });
+        const data = await res.json();
+        if (data.success && data.url) {
+          setHeaderImageUrl(data.url);
+        }
+      } catch (err) {
+        console.warn('Media upload failed:', err);
+      } finally {
+        setUploadingImage(false);
+      }
+    };
+    reader.readAsDataURL(file);
+  };
   const [bodyText, setBodyText] = useState('Hello {{1}}, we are pleased to offer you special access to {{2}}.\n\nTap below if you are interested.');
   const [footerText, setFooterText] = useState('A5 Automation');
   const [sampleVars, setSampleVars] = useState<Record<string, string>>({
@@ -1465,14 +1509,79 @@ export default function DeveloperCampaignHQ() {
                   {headerType === 'IMAGE' && (
                     <div style={{
                       background: '#f8fafc',
-                      padding: '12px 14px',
-                      borderRadius: '10px',
+                      padding: '14px',
+                      borderRadius: '12px',
                       border: '1px solid #e2e8f0',
                       marginTop: '4px'
                     }}>
-                      <label style={{ fontSize: '0.78rem', fontWeight: 600, color: '#475569', display: 'block', marginBottom: '6px' }}>
-                        Header Image Link (Public HTTPS URL required by Meta for Template Review)
-                      </label>
+                      {/* Hidden File Input */}
+                      <input
+                        type="file"
+                        ref={fileInputRef}
+                        accept="image/png, image/jpeg, image/webp"
+                        onChange={handleFileUpload}
+                        style={{ display: 'none' }}
+                      />
+
+                      {/* Local File Upload Button / Box */}
+                      <div style={{
+                        border: '2px dashed #cbd5e1',
+                        borderRadius: '10px',
+                        padding: '16px',
+                        textAlign: 'center',
+                        background: '#ffffff',
+                        marginBottom: '12px',
+                        cursor: 'pointer',
+                        transition: 'border-color 0.2s',
+                      }}
+                      onClick={() => fileInputRef.current?.click()}
+                      >
+                        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '6px' }}>
+                          <div style={{
+                            width: '40px',
+                            height: '40px',
+                            borderRadius: '50%',
+                            background: '#ecfdf5',
+                            color: '#059669',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center'
+                          }}>
+                            <Upload size={20} />
+                          </div>
+                          <div style={{ fontWeight: 700, fontSize: '0.86rem', color: '#1e293b' }}>
+                            {uploadingImage ? 'Uploading & Preparing Image...' : 'Click to Upload Image from Your Computer'}
+                          </div>
+                          <div style={{ fontSize: '0.74rem', color: '#64748b' }}>
+                            Supports PNG, JPG, or WebP (Brochures, course posters, banners up to 5MB)
+                          </div>
+                          {uploadedFileName && (
+                            <div style={{
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              gap: '5px',
+                              background: '#ecfdf5',
+                              color: '#059669',
+                              padding: '3px 10px',
+                              borderRadius: '999px',
+                              fontSize: '0.75rem',
+                              fontWeight: 600,
+                              marginTop: '4px'
+                            }}>
+                              <CheckCircle2 size={13} /> Attached: {uploadedFileName}
+                            </div>
+                          )}
+                        </div>
+                      </div>
+
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
+                        <div style={{ height: '1px', flex: 1, background: '#e2e8f0' }} />
+                        <span style={{ fontSize: '0.72rem', color: '#94a3b8', fontWeight: 600, textTransform: 'uppercase' }}>
+                          OR Image URL / Web Link
+                        </span>
+                        <div style={{ height: '1px', flex: 1, background: '#e2e8f0' }} />
+                      </div>
+
                       <input
                         type="url"
                         className="form-input"
@@ -1509,8 +1618,9 @@ export default function DeveloperCampaignHQ() {
                           Industrial PLC
                         </button>
                       </div>
-                      <div style={{ fontSize: '0.71rem', color: '#059669', marginTop: '6px' }}>
-                        💡 The image will display at the top of the message in WhatsApp just like the phone preview on the right.
+
+                      <div style={{ fontSize: '0.71rem', color: '#059669', marginTop: '8px' }}>
+                        💡 Any image selected from your computer is automatically hosted and previewed live on the phone mockup!
                       </div>
                     </div>
                   )}
