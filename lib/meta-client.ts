@@ -131,7 +131,8 @@ export async function sendWhatsAppTemplateMessage(
   recipientPhone: string,
   templateName: string,
   languageCode: string = 'en_US',
-  bodyParameters: string[] = []
+  bodyParameters: string[] = [],
+  headerImageUrl?: string
 ) {
   if (!creds.phoneNumberId || !creds.accessToken) {
     throw new Error('Phone Number ID and Access Token are required to send messages.');
@@ -152,16 +153,34 @@ export async function sendWhatsAppTemplateMessage(
     },
   };
 
+  const components: any[] = [];
+
+  if (headerImageUrl) {
+    components.push({
+      type: 'header',
+      parameters: [
+        {
+          type: 'image',
+          image: {
+            link: headerImageUrl,
+          },
+        },
+      ],
+    });
+  }
+
   if (bodyParameters.length > 0) {
-    payload.template.components = [
-      {
-        type: 'body',
-        parameters: bodyParameters.map((val) => ({
-          type: 'text',
-          text: val,
-        })),
-      },
-    ];
+    components.push({
+      type: 'body',
+      parameters: bodyParameters.map((val) => ({
+        type: 'text',
+        text: val,
+      })),
+    });
+  }
+
+  if (components.length > 0) {
+    payload.template.components = components;
   }
 
   const url = `${BASE_GRAPH_URL}/${creds.phoneNumberId}/messages`;

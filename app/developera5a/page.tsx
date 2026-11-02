@@ -33,7 +33,8 @@ import {
   Globe,
   PhoneCall,
   ExternalLink,
-  PlusCircle
+  PlusCircle,
+  Image as ImageIcon
 } from 'lucide-react';
 
 export interface TemplateButtonConfig {
@@ -126,8 +127,9 @@ export default function DeveloperCampaignHQ() {
   const [tmplName, setTmplName] = useState('');
   const [tmplCategory, setTmplCategory] = useState<'MARKETING' | 'UTILITY'>('MARKETING');
   const [tmplLanguage, setTmplLanguage] = useState('en_US');
-  const [headerType, setHeaderType] = useState<'TEXT' | 'NONE'>('TEXT');
+  const [headerType, setHeaderType] = useState<'TEXT' | 'IMAGE' | 'NONE'>('TEXT');
   const [headerText, setHeaderText] = useState('Exclusive Privilege for {{1}}');
+  const [headerImageUrl, setHeaderImageUrl] = useState('https://a5automation.com/wp-content/uploads/2026/04/A5A-Automation-Industrial-Training-logo.png');
   const [bodyText, setBodyText] = useState('Hello {{1}}, we are pleased to offer you special access to {{2}}.\n\nTap below if you are interested.');
   const [footerText, setFooterText] = useState('A5 Automation');
   const [sampleVars, setSampleVars] = useState<Record<string, string>>({
@@ -482,6 +484,14 @@ export default function DeveloperCampaignHQ() {
           header_text: [sampleVars['1'] || 'Valued Client'],
         },
       });
+    } else if (headerType === 'IMAGE') {
+      components.push({
+        type: 'HEADER',
+        format: 'IMAGE',
+        example: {
+          header_handle: [headerImageUrl.trim() || 'https://a5automation.com/wp-content/uploads/2026/04/A5A-Automation-Industrial-Training-logo.png'],
+        },
+      });
     }
 
     // Body example
@@ -632,9 +642,11 @@ export default function DeveloperCampaignHQ() {
 
     // If Meta creds are active, broadcast to real numbers
     if (creds.phoneNumberId && creds.accessToken && template) {
+      const imgHeader = template.components?.find((c) => c.type === 'HEADER' && c.format === 'IMAGE');
+      const headerImgUrl = imgHeader?.example?.header_handle?.[0];
       try {
         for (const r of recipients.slice(0, 5)) {
-          await sendWhatsAppTemplateMessage(creds, r.phone, template.name, template.language, [r.name]);
+          await sendWhatsAppTemplateMessage(creds, r.phone, template.name, template.language, [r.name], headerImgUrl);
         }
       } catch (e) {
         console.warn('Real Meta dispatch note:', e);
@@ -1411,15 +1423,24 @@ export default function DeveloperCampaignHQ() {
 
                 {/* Header Config */}
                 <div className="form-group">
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '6px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
                     <label className="form-label" style={{ marginBottom: 0 }}>Message Header</label>
-                    <div style={{ display: 'flex', gap: '8px' }}>
+                    <div style={{ display: 'flex', gap: '6px' }}>
                       <button
                         type="button"
                         onClick={() => setHeaderType('TEXT')}
                         className={`btn btn-sm ${headerType === 'TEXT' ? 'btn-primary' : 'btn-secondary'}`}
                       >
                         Text Header
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setHeaderType('IMAGE')}
+                        className={`btn btn-sm ${headerType === 'IMAGE' ? 'btn-primary' : 'btn-secondary'}`}
+                        style={{ display: 'inline-flex', alignItems: 'center', gap: '5px' }}
+                      >
+                        <ImageIcon size={13} />
+                        Image Header
                       </button>
                       <button
                         type="button"
@@ -1430,6 +1451,7 @@ export default function DeveloperCampaignHQ() {
                       </button>
                     </div>
                   </div>
+
                   {headerType === 'TEXT' && (
                     <input
                       type="text"
@@ -1438,6 +1460,59 @@ export default function DeveloperCampaignHQ() {
                       value={headerText}
                       onChange={(e) => setHeaderText(e.target.value)}
                     />
+                  )}
+
+                  {headerType === 'IMAGE' && (
+                    <div style={{
+                      background: '#f8fafc',
+                      padding: '12px 14px',
+                      borderRadius: '10px',
+                      border: '1px solid #e2e8f0',
+                      marginTop: '4px'
+                    }}>
+                      <label style={{ fontSize: '0.78rem', fontWeight: 600, color: '#475569', display: 'block', marginBottom: '6px' }}>
+                        Header Image Link (Public HTTPS URL required by Meta for Template Review)
+                      </label>
+                      <input
+                        type="url"
+                        className="form-input"
+                        placeholder="https://example.com/banner.jpg"
+                        value={headerImageUrl}
+                        onChange={(e) => setHeaderImageUrl(e.target.value)}
+                        style={{ marginBottom: '8px' }}
+                      />
+
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
+                        <span style={{ fontSize: '0.72rem', color: '#64748b', fontWeight: 600 }}>Presets:</span>
+                        <button
+                          type="button"
+                          onClick={() => setHeaderImageUrl('https://a5automation.com/wp-content/uploads/2026/04/A5A-Automation-Industrial-Training-logo.png')}
+                          className="btn btn-secondary btn-sm"
+                          style={{ fontSize: '0.72rem', padding: '2px 8px' }}
+                        >
+                          A5 Logo
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setHeaderImageUrl('https://images.unsplash.com/photo-1581091226825-a6a2a5aee158?w=800&auto=format&fit=crop&q=80')}
+                          className="btn btn-secondary btn-sm"
+                          style={{ fontSize: '0.72rem', padding: '2px 8px' }}
+                        >
+                          Automation Lab
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setHeaderImageUrl('https://images.unsplash.com/photo-1581092160607-ee22621dd758?w=800&auto=format&fit=crop&q=80')}
+                          className="btn btn-secondary btn-sm"
+                          style={{ fontSize: '0.72rem', padding: '2px 8px' }}
+                        >
+                          Industrial PLC
+                        </button>
+                      </div>
+                      <div style={{ fontSize: '0.71rem', color: '#059669', marginTop: '6px' }}>
+                        💡 The image will display at the top of the message in WhatsApp just like the phone preview on the right.
+                      </div>
+                    </div>
                   )}
                 </div>
 
@@ -1673,6 +1748,30 @@ export default function DeveloperCampaignHQ() {
 
                 <div className="phone-chat-body">
                   <div className="wa-message-bubble">
+                    {headerType === 'IMAGE' && headerImageUrl && (
+                      <div style={{
+                        margin: '-8px -12px 10px -12px',
+                        borderRadius: '10px 10px 0 0',
+                        overflow: 'hidden',
+                        maxHeight: '140px',
+                        background: '#f1f5f9',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        borderBottom: '1px solid #e2e8f0'
+                      }}>
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img
+                          src={headerImageUrl}
+                          alt="Header Media"
+                          style={{ width: '100%', height: '100%', maxHeight: '140px', objectFit: 'cover', display: 'block' }}
+                          onError={(e) => {
+                            (e.target as HTMLElement).style.display = 'none';
+                          }}
+                        />
+                      </div>
+                    )}
+
                     {previewHeader && (
                       <div className="wa-message-header">{previewHeader}</div>
                     )}
