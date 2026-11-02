@@ -1097,12 +1097,25 @@ export default function DeveloperCampaignHQ() {
       for (let i = 0; i < recipients.length; i++) {
         const r = recipients[i];
         try {
+          // Detect if template actually expects body parameters (e.g. {{1}}, {{2}}).
+          // If the template has NO variables, passing parameters causes Meta Error #132000!
+          const bodyComp = template.components?.find((c) => c.type === 'BODY');
+          const varMatches = (bodyComp?.text || '').match(/\{\{\d+\}\}/g) || [];
+          const varCount = varMatches.length;
+          let paramsToSend: string[] = [];
+          if (varCount > 0) {
+            paramsToSend = [r.name];
+            for (let v = 1; v < varCount; v++) {
+              paramsToSend.push(r.variables?.[String(v + 1)] || r.name);
+            }
+          }
+
           const res = await sendWhatsAppTemplateMessage(
             creds,
             r.phone,
             template.name,
-            template.language,
-            [r.name],
+            template.language || 'en',
+            paramsToSend,
             headerImgUrl
           );
           if (res.success) {
