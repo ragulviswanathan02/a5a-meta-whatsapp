@@ -252,6 +252,16 @@ export async function dbUpsertTemplate(tmpl: WhatsAppTemplate): Promise<boolean>
   }
 }
 
+export async function dbDeleteTemplate(id: string): Promise<boolean> {
+  try {
+    const { error } = await supabase.from('whatsapp_templates').delete().eq('id', id);
+    return !error;
+  } catch (err) {
+    console.warn('[Supabase dbDeleteTemplate Error]', err);
+    return false;
+  }
+}
+
 function tmplCategoryValid(c: string) {
   return c === 'UTILITY' ? 'UTILITY' : 'MARKETING';
 }

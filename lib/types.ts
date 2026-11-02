@@ -35,7 +35,7 @@ export interface WhatsAppTemplate {
   name: string;
   category: 'MARKETING' | 'UTILITY' | 'AUTHENTICATION';
   language: string;
-  status: 'APPROVED' | 'PENDING' | 'REJECTED' | 'PAUSED';
+  status: 'APPROVED' | 'PENDING' | 'REJECTED' | 'PAUSED' | 'DRAFT';
   rejectionReason?: string;
   components: TemplateComponent[];
   sampleVariables: Record<string, string>; // e.g. { '1': 'John Doe', '2': 'Festive Offer' }

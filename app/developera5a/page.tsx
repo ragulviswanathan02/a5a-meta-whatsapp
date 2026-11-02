@@ -67,13 +67,19 @@ import {
   getStoredContacts,
   saveStoredContacts 
 } from '@/lib/storage';
-import { testMetaConnection, submitTemplateToMeta, sendWhatsAppTemplateMessage } from '@/lib/meta-client';
+import { 
+  testMetaConnection, 
+  submitTemplateToMeta, 
+  sendWhatsAppTemplateMessage,
+  fetchTemplatesFromMeta 
+} from '@/lib/meta-client';
 import { isPortalAuthenticated, logoutPortal, useInactivityTracker } from '@/lib/auth';
 import { 
   dbGetCampaigns, 
   dbUpsertCampaign, 
   dbGetTemplates, 
   dbUpsertTemplate, 
+  dbDeleteTemplate,
   dbGetContactGroups, 
   dbUpsertContactGroup, 
   dbDeleteContactGroup, 
@@ -127,7 +133,7 @@ export default function DeveloperCampaignHQ() {
 
   // Template Studio state
   const [tmplName, setTmplName] = useState('');
-  const [tmplCategory, setTmplCategory] = useState<'MARKETING' | 'UTILITY'>('MARKETING');
+  const [tmplCategory, setTmplCategory] = useState<'MARKETING' | 'UTILITY' | 'AUTHENTICATION'>('MARKETING');
   const [tmplLanguage, setTmplLanguage] = useState('en_US');
   const [headerType, setHeaderType] = useState<'TEXT' | 'IMAGE' | 'NONE'>('TEXT');
   const [headerText, setHeaderText] = useState('Exclusive Privilege for {{1}}');
@@ -784,7 +790,7 @@ export default function DeveloperCampaignHQ() {
       name: cleanName,
       category: tmplCategory,
       language: tmplLanguage,
-      status: creds.accessToken ? 'PENDING' : 'APPROVED',
+      status: (creds.wabaId && creds.accessToken) ? 'PENDING' : 'DRAFT',
       sampleVariables: sampleVars,
       components,
       createdAt: new Date().toISOString(),
@@ -800,22 +806,126 @@ export default function DeveloperCampaignHQ() {
           components,
         });
         newTemplate.status = 'PENDING';
-        setTemplateStatusToast('✅ Submitted to Meta Cloud API! In review.');
+        setTemplateStatusToast('✅ Submitted to Meta Cloud API! Status is now PENDING review.');
       } catch (err: any) {
-        newTemplate.status = 'APPROVED';
-        setTemplateStatusToast(`Saved locally. Meta returned: ${err.message}`);
+        newTemplate.status = 'DRAFT';
+        newTemplate.rejectionReason = err.message;
+        setTemplateStatusToast(`⚠️ Saved as Draft. Meta returned: ${err.message}`);
       }
     } else {
-      newTemplate.status = 'APPROVED';
-      setTemplateStatusToast('Template saved locally (ready for campaign broadcasting)!');
+      newTemplate.status = 'DRAFT';
+      setTemplateStatusToast('📝 Template saved as Local Draft (Meta Disconnected). Connect Meta API to submit for official WhatsApp approval.');
     }
 
-    const updatedTemplates = [newTemplate, ...templates];
+    const updatedTemplates = [newTemplate, ...templates.filter(t => t.id !== newTemplate.id && t.name !== newTemplate.name)];
     setTemplates(updatedTemplates);
     saveStoredTemplates(updatedTemplates);
     dbUpsertTemplate(newTemplate);
     setTmplName('');
-    setTimeout(() => setTemplateStatusToast(''), 4000);
+    setTimeout(() => setTemplateStatusToast(''), 4500);
+  };
+
+  // Delete Template
+  const handleDeleteTemplate = async (templateId: string, templateName: string) => {
+    if (!confirm(`Are you sure you want to delete template "${templateName}"?`)) return;
+
+    const nextTemplates = templates.filter((t) => t.id !== templateId);
+    setTemplates(nextTemplates);
+    saveStoredTemplates(nextTemplates);
+    await dbDeleteTemplate(templateId);
+
+    setTemplateStatusToast(`🗑️ Template "${templateName}" deleted.`);
+    setTimeout(() => setTemplateStatusToast(''), 3000);
+  };
+
+  // Load Template into Editor
+  const handleLoadTemplate = (t: WhatsAppTemplate) => {
+    setTmplName(t.name);
+    setTmplCategory(t.category);
+    setTmplLanguage(t.language);
+
+    // Extract Header
+    const headerComp = t.components?.find((c) => c.type === 'HEADER');
+    if (headerComp) {
+      if (headerComp.format === 'IMAGE') {
+        setHeaderType('IMAGE');
+        const imgUrl = headerComp.example?.header_handle?.[0];
+        if (imgUrl) setHeaderImageUrl(imgUrl);
+      } else {
+        setHeaderType('TEXT');
+        setHeaderText(headerComp.text || '');
+      }
+    } else {
+      setHeaderType('NONE');
+    }
+
+    // Extract Body
+    const bodyComp = t.components?.find((c) => c.type === 'BODY');
+    if (bodyComp?.text) setBodyText(bodyComp.text);
+
+    // Extract Footer
+    const footerComp = t.components?.find((c) => c.type === 'FOOTER');
+    setFooterText(footerComp?.text || '');
+
+    // Extract Buttons
+    const btnComp = t.components?.find((c) => c.type === 'BUTTONS');
+    if (btnComp?.buttons && btnComp.buttons.length > 0) {
+      setTemplateButtons(
+        btnComp.buttons.map((b, i) => ({
+          id: `btn-${Date.now()}-${i}`,
+          type: b.type,
+          text: b.text,
+          url: b.url,
+          phoneNumber: b.phone_number,
+        }))
+      );
+    }
+
+    if (t.sampleVariables) {
+      setSampleVars(t.sampleVariables);
+    }
+
+    setTemplateStatusToast(`Loaded "${t.name}" into builder. Check phone preview on the right!`);
+    window.scrollTo({ top: 120, behavior: 'smooth' });
+    setTimeout(() => setTemplateStatusToast(''), 3500);
+  };
+
+  // Sync Live Templates from Meta
+  const [syncingMetaTemplates, setSyncingMetaTemplates] = useState(false);
+  const handleSyncMetaTemplates = async () => {
+    if (!creds.wabaId || !creds.accessToken) {
+      alert('Please connect your Meta WABA ID and Access Token in the Meta API tab first.');
+      return;
+    }
+
+    setSyncingMetaTemplates(true);
+    try {
+      const metaTmpls = await fetchTemplatesFromMeta(creds);
+      if (Array.isArray(metaTmpls)) {
+        const syncedList: WhatsAppTemplate[] = metaTmpls.map((mt: any) => ({
+          id: mt.id || `tmpl-${mt.name}`,
+          name: mt.name,
+          category: mt.category || 'UTILITY',
+          language: mt.language || 'en_US',
+          status: mt.status || 'APPROVED',
+          rejectionReason: mt.rejected_reason || undefined,
+          components: mt.components || [],
+          sampleVariables: {},
+          createdAt: new Date().toISOString(),
+        }));
+
+        setTemplates(syncedList);
+        saveStoredTemplates(syncedList);
+        for (const st of syncedList) {
+          await dbUpsertTemplate(st);
+        }
+        alert(`✅ Successfully synced ${syncedList.length} template(s) directly from Meta WhatsApp!`);
+      }
+    } catch (err: any) {
+      alert('Meta Sync failed: ' + (err.message || 'Unknown error'));
+    } finally {
+      setSyncingMetaTemplates(false);
+    }
   };
 
   // Launch New Campaign Broadcast
@@ -1101,13 +1211,32 @@ export default function DeveloperCampaignHQ() {
                       {templates.length === 0 ? (
                         <option value="">No templates created yet (build one in Template Studio)</option>
                       ) : (
-                        templates.map((t) => (
-                          <option key={t.id} value={t.id}>
-                            {t.name} ({t.category}) • [{t.status}]
-                          </option>
-                        ))
+                        templates.map((t) => {
+                          const statusBadge =
+                            t.status === 'APPROVED' ? '✓ Meta Approved' :
+                            t.status === 'PENDING' ? '⏳ Pending Meta Review' :
+                            t.status === 'REJECTED' ? '❌ Rejected by Meta' :
+                            '📝 Local Draft (Meta Disconnected)';
+                          return (
+                            <option key={t.id} value={t.id}>
+                              {t.name} ({t.category}) • [{statusBadge}]
+                            </option>
+                          );
+                        })
                       )}
                     </select>
+
+                    {(() => {
+                      const sel = templates.find((t) => t.id === selectedTemplateId);
+                      if (sel && sel.status !== 'APPROVED') {
+                        return (
+                          <div style={{ fontSize: '0.74rem', color: '#b45309', background: '#fffbeb', padding: '6px 10px', borderRadius: '6px', marginTop: '6px', border: '1px solid #fde68a' }}>
+                            ℹ️ Note: <strong>{sel.name}</strong> is currently a <strong>{sel.status === 'DRAFT' ? 'Local Draft' : 'Pending Meta Review'}</strong>. Real WhatsApp broadcasts will deliver live once approved by Meta.
+                          </div>
+                        );
+                      }
+                      return null;
+                    })()}
                   </div>
                 </div>
 
@@ -1684,7 +1813,8 @@ export default function DeveloperCampaignHQ() {
 
         {/* TAB 3: META TEMPLATE STUDIO */}
         {activeTab === 'templates' && (
-          <div className="responsive-grid-split" style={{ display: 'grid', gridTemplateColumns: '1.2fr 0.8fr', gap: '28px', alignItems: 'flex-start' }}>
+          <>
+            <div className="responsive-grid-split" style={{ display: 'grid', gridTemplateColumns: '1.2fr 0.8fr', gap: '28px', alignItems: 'flex-start' }}>
             {/* Template Editor Form */}
             <div className="glass-panel" style={{ padding: '24px 28px' }}>
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '20px' }}>
@@ -2211,7 +2341,136 @@ export default function DeveloperCampaignHQ() {
               </div>
             </div>
           </div>
-        )}
+
+          {/* Template Library Table (View, Status, Edit/Load, Delete) */}
+          <div className="glass-panel" style={{ marginTop: '28px', padding: '24px 28px', overflow: 'hidden' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '18px', flexWrap: 'wrap', gap: '12px' }}>
+              <div>
+                <h3 style={{ fontSize: '1.1rem', fontWeight: 800, color: 'var(--text-main)', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <FileText size={18} color="var(--wa-green)" />
+                  <span>Saved Templates Library ({templates.length})</span>
+                </h3>
+                <p style={{ fontSize: '0.76rem', color: 'var(--text-muted)' }}>
+                  Review approval status in Meta, load into editor to preview or edit, or delete templates.
+                </p>
+              </div>
+
+              <button
+                type="button"
+                onClick={handleSyncMetaTemplates}
+                disabled={syncingMetaTemplates}
+                className="btn btn-secondary btn-sm"
+                style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}
+              >
+                <RotateCcw size={14} className={syncingMetaTemplates ? 'spinner' : ''} />
+                <span>{syncingMetaTemplates ? 'Syncing with Meta...' : '🔄 Sync Live Status from Meta'}</span>
+              </button>
+            </div>
+
+            {templates.length === 0 ? (
+              <div style={{ textAlign: 'center', padding: '36px 0', color: 'var(--text-dim)' }}>
+                <FileText size={32} style={{ color: '#cbd5e1', margin: '0 auto 8px' }} />
+                <p style={{ fontWeight: 600 }}>No templates saved yet</p>
+                <p style={{ fontSize: '0.8rem', color: '#94a3b8' }}>Design a template using the builder above to get started.</p>
+              </div>
+            ) : (
+              <div style={{ overflowX: 'auto' }}>
+                <table className="leads-table">
+                  <thead>
+                    <tr>
+                      <th>Template Name</th>
+                      <th>Category</th>
+                      <th>Header Format</th>
+                      <th>Approval Status</th>
+                      <th>Created</th>
+                      <th style={{ textAlign: 'right' }}>Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {templates.map((t) => {
+                      const headerComp = t.components?.find((c) => c.type === 'HEADER');
+                      const headerFormat = headerComp?.format || (headerComp ? 'TEXT' : 'NONE');
+
+                      return (
+                        <tr key={t.id}>
+                          <td>
+                            <div style={{ fontWeight: 700, color: 'var(--text-main)', fontFamily: 'monospace' }}>
+                              {t.name}
+                            </div>
+                            <div style={{ fontSize: '0.72rem', color: 'var(--text-dim)' }}>
+                              Lang: {t.language}
+                            </div>
+                          </td>
+                          <td>
+                            <span style={{ fontSize: '0.78rem', fontWeight: 600, color: '#475569' }}>
+                              {t.category}
+                            </span>
+                          </td>
+                          <td>
+                            <span style={{
+                              fontSize: '0.72rem',
+                              padding: '3px 8px',
+                              borderRadius: '6px',
+                              background: headerFormat === 'IMAGE' ? '#ecfdf5' : '#f1f5f9',
+                              color: headerFormat === 'IMAGE' ? '#059669' : '#64748b',
+                              fontWeight: 600
+                            }}>
+                              {headerFormat === 'IMAGE' ? '🖼️ Image Banner' : headerFormat === 'TEXT' ? '🔤 Text Header' : '— None'}
+                            </span>
+                          </td>
+                          <td>
+                            {t.status === 'APPROVED' ? (
+                              <span className="badge badge-green">✓ Meta Approved</span>
+                            ) : t.status === 'PENDING' ? (
+                              <span className="badge" style={{ background: '#fef3c7', color: '#b45309', fontWeight: 700 }}>
+                                ⏳ Pending Meta Review
+                              </span>
+                            ) : t.status === 'REJECTED' ? (
+                              <span className="badge" style={{ background: '#fee2e2', color: '#dc2626', fontWeight: 700 }}>
+                                ❌ Meta Rejected
+                              </span>
+                            ) : (
+                              <span className="badge" style={{ background: '#f1f5f9', color: '#475569', fontWeight: 600 }}>
+                                📝 Local Draft (Not in Meta)
+                              </span>
+                            )}
+                          </td>
+                          <td style={{ fontSize: '0.78rem', color: 'var(--text-dim)' }}>
+                            {new Date(t.createdAt).toLocaleDateString()}
+                          </td>
+                          <td style={{ textAlign: 'right' }}>
+                            <div style={{ display: 'inline-flex', gap: '6px' }}>
+                              <button
+                                type="button"
+                                onClick={() => handleLoadTemplate(t)}
+                                className="btn btn-secondary btn-sm"
+                                title="Load & Edit in Preview"
+                                style={{ padding: '5px 12px', fontSize: '0.78rem', display: 'inline-flex', alignItems: 'center', gap: '4px' }}
+                              >
+                                <Eye size={13} />
+                                <span>Edit / Preview</span>
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => handleDeleteTemplate(t.id, t.name)}
+                                className="btn btn-secondary btn-sm"
+                                title="Delete Template"
+                                style={{ color: '#ef4444', padding: '5px 8px' }}
+                              >
+                                <Trash2 size={13} />
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+        </>
+      )}
 
         {/* TAB 4: RESEND TO FAILED ENGINE */}
         {activeTab === 'resend' && (
