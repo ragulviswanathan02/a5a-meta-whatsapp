@@ -1085,12 +1085,13 @@ export default function DeveloperCampaignHQ() {
       let headerImgUrl: string | undefined = undefined;
       if (imgHeader) {
         const handle = imgHeader?.example?.header_handle?.[0];
-        // If handle is an internal scontent WhatsApp link, do not pass it back to Meta as a download link.
-        // Instead, pass the reliable public /api/media link or user's custom direct image URL to prevent Meta Error 131053.
+        // If handle is already a direct public link, use it directly
         if (handle && !handle.includes('scontent.whatsapp.net')) {
           headerImgUrl = handle;
+        } else if (template.name === 'a5a_campaign_1' || template.id === '1656740342749388') {
+          headerImgUrl = 'https://leads.a5automation.com/api/media?id=tmpl_media_1656740342749388';
         } else {
-          headerImgUrl = 'https://leads.a5automation.com/api/media?id=media_1793600311910_nssqb';
+          headerImgUrl = `https://leads.a5automation.com/api/media?id=tmpl_media_${template.id}`;
         }
       }
 
