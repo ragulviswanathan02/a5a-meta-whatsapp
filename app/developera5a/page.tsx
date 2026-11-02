@@ -35,7 +35,8 @@ import {
   ExternalLink,
   PlusCircle,
   Image as ImageIcon,
-  FileSpreadsheet
+  FileSpreadsheet,
+  Info
 } from 'lucide-react';
 import * as XLSX from 'xlsx';
 
@@ -88,7 +89,8 @@ import {
   dbUpsertContacts, 
   dbDeleteContact,
   dbGetCredentials,
-  dbUpsertCredentials
+  dbUpsertCredentials,
+  supabase
 } from '@/lib/supabase';
 
 export default function DeveloperCampaignHQ() {
@@ -235,6 +237,72 @@ export default function DeveloperCampaignHQ() {
   const [resending, setResending] = useState(false);
   const [resendSuccess, setResendSuccess] = useState('');
 
+  // Lead simulation test
+  const [simulatingLead, setSimulatingLead] = useState(false);
+  const [simFeedback, setSimFeedback] = useState('');
+
+  const handleSimulateInboundLead = async () => {
+    setSimulatingLead(true);
+    setSimFeedback('');
+    try {
+      const activeCamp = campaigns[0];
+      const targetRecipient = activeCamp?.recipients?.[0];
+      const testPhone = targetRecipient?.phone || '+919566671183';
+      const testName = targetRecipient?.name || 'Ragul (Test User)';
+      const btnText = templateButtons[0]?.text || 'I am Interested';
+
+      const res = await fetch('/api/webhook', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          object: 'whatsapp_business_account',
+          entry: [
+            {
+              id: creds.wabaId || '1146427701074556',
+              changes: [
+                {
+                  value: {
+                    messaging_product: 'whatsapp',
+                    metadata: {
+                      display_phone_number: creds.phoneDetails?.display_phone_number || '6381270978',
+                      phone_number_id: creds.phoneNumberId || '1432860753238628'
+                    },
+                    contacts: [{ profile: { name: testName }, wa_id: testPhone.replace(/[^0-9]/g, '') }],
+                    messages: [
+                      {
+                        from: testPhone.replace(/[^0-9]/g, ''),
+                        id: `wamid.sim_${Date.now()}`,
+                        timestamp: String(Math.floor(Date.now() / 1000)),
+                        type: 'button',
+                        button: { text: btnText, payload: btnText }
+                      }
+                    ]
+                  },
+                  field: 'messages'
+                }
+              ]
+            }
+          ]
+        })
+      });
+
+      if (res.ok) {
+        setSimFeedback(`✅ Test Lead Captured! Synced to Leads Portal and Campaign "${activeCamp?.name || 'Inbound'}".`);
+        const updatedCamps = await dbGetCampaigns();
+        if (updatedCamps && updatedCamps.length > 0) {
+          setCampaigns(updatedCamps);
+          saveStoredCampaigns(updatedCamps);
+        }
+      } else {
+        setSimFeedback('Failed to simulate lead response.');
+      }
+    } catch (e: any) {
+      setSimFeedback(`Error: ${e.message}`);
+    } finally {
+      setSimulatingLead(false);
+    }
+  };
+
   useEffect(() => {
     const authed = isPortalAuthenticated('developer');
     setIsAuthenticated(authed);
@@ -273,12 +341,38 @@ export default function DeveloperCampaignHQ() {
         }
       });
 
+      const loadCampaignsSilently = async () => {
+        try {
+          const cloudCamps = await dbGetCampaigns();
+          if (cloudCamps && Array.isArray(cloudCamps)) {
+            setCampaigns(cloudCamps);
+            saveStoredCampaigns(cloudCamps);
+          }
+        } catch {}
+      };
+
       dbGetCampaigns().then((cloudCamps) => {
         if (cloudCamps && cloudCamps.length > 0) {
           setCampaigns(cloudCamps);
           saveStoredCampaigns(cloudCamps);
         }
       });
+
+      // Realtime subscription for live campaign updates (delivery status & inbound leads)
+      const campChannel = supabase
+        .channel('realtime_developer_campaigns')
+        .on(
+          'postgres_changes',
+          { event: '*', schema: 'public', table: 'campaigns' },
+          () => {
+            loadCampaignsSilently();
+          }
+        )
+        .subscribe();
+
+      const pollTimer = setInterval(() => {
+        loadCampaignsSilently();
+      }, 4000);
 
       dbGetContactGroups().then((cloudGroups) => {
         if (cloudGroups && cloudGroups.length > 0) {
@@ -296,8 +390,16 @@ export default function DeveloperCampaignHQ() {
           saveStoredContacts(cloudContacts);
         }
       });
+
+      setLoading(false);
+
+      return () => {
+        supabase.removeChannel(campChannel);
+        clearInterval(pollTimer);
+      };
+    } else {
+      setLoading(false);
     }
-    setLoading(false);
   }, []);
 
   // Variable detection from body text and header text
@@ -994,9 +1096,8 @@ export default function DeveloperCampaignHQ() {
             headerImgUrl
           );
           if (res.success) {
-            r.status = 'delivered';
-            r.deliveredAt = new Date().toISOString();
-            deliveredCount++;
+            r.status = 'sent';
+            r.sentAt = new Date().toISOString();
             sentCount++;
           } else {
             r.status = 'failed';
@@ -1022,10 +1123,10 @@ export default function DeveloperCampaignHQ() {
       templateId: template?.id || 'tmpl-custom',
       templateName: template?.name || 'Custom Broadcast',
       createdAt: new Date().toISOString(),
-      status: 'completed',
+      status: failedCount === totalCount ? 'failed' : 'sent',
       totalCount,
       sentCount,
-      deliveredCount,
+      deliveredCount: 0,
       readCount: 0,
       leadsCount: 0,
       failedCount,
@@ -1036,6 +1137,12 @@ export default function DeveloperCampaignHQ() {
     setCampaigns(updated);
     saveStoredCampaigns(updated);
     dbUpsertCampaign(newCampaign);
+
+    if (failedCount > 0) {
+      setCampFeedback(`⚠️ Campaign dispatched with ${failedCount} errors. ${sentCount} messages accepted by Meta.`);
+    } else {
+      setCampFeedback(`🚀 Campaign launched! ${sentCount} messages accepted by Meta Cloud queue. Delivery receipts and recipient button clicks will sync in real-time below.`);
+    }
 
     setLaunchingCamp(false);
     if (failedCount > 0) {
@@ -1235,6 +1342,28 @@ export default function DeveloperCampaignHQ() {
                 </div>
               </div>
 
+              <div style={{
+                marginBottom: '20px',
+                padding: '14px 18px',
+                borderRadius: '10px',
+                background: 'rgba(239, 246, 255, 0.9)',
+                border: '1px solid rgba(59, 130, 246, 0.3)',
+                display: 'flex',
+                alignItems: 'flex-start',
+                gap: '12px',
+                fontSize: '0.84rem',
+                color: '#1e3a8a'
+              }}>
+                <Info size={18} style={{ flexShrink: 0, marginTop: '2px', color: '#2563eb' }} />
+                <div>
+                  <strong style={{ color: '#1e40af' }}>Meta WhatsApp Cloud API Broadcast Notice:</strong>
+                  <div style={{ marginTop: '4px', lineHeight: '1.45' }}>
+                    1. Outbound broadcasts are dispatched directly through Meta&apos;s Cloud API. Meta requires your payment method / prepaid balance to be added in <strong>Messaging accounts</strong> (not &ldquo;Ad accounts&rdquo;) under <a href="https://business.facebook.com/latest/billing_hub/accounts" target="_blank" rel="noreferrer" style={{ textDecoration: 'underline', fontWeight: 700, color: '#1d4ed8' }}>Meta Business Suite &gt; Billing &amp; Payments &gt; Messaging Accounts</a>.<br />
+                    2. Once WhatsApp delivers the message to the recipient phone, delivery receipts and recipient button clicks (&ldquo;I am Interested&rdquo;) stream automatically to this table and the <a href="/" style={{ textDecoration: 'underline', fontWeight: 700, color: '#1d4ed8' }}>Leads CRM</a> in real-time.
+                  </div>
+                </div>
+              </div>
+
               <form onSubmit={handleLaunchCampaign}>
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
                   <div className="form-group">
@@ -1421,13 +1550,25 @@ export default function DeveloperCampaignHQ() {
                           <span style={{ fontWeight: 700, color: 'var(--text-main)' }}>{camp.totalCount}</span>
                         </td>
                         <td>
-                          <span className="badge badge-green">
-                            {camp.deliveredCount} Delivered
-                          </span>
+                          {camp.deliveredCount > 0 ? (
+                            <span className="badge badge-green">
+                              ✓ {camp.deliveredCount} Delivered
+                            </span>
+                          ) : camp.sentCount > 0 && camp.failedCount === 0 ? (
+                            <span className="badge" style={{ background: '#e0f2fe', color: '#0369a1', border: '1px solid #bae6fd', fontWeight: 600 }}>
+                              ⏳ {camp.sentCount} Queued in Meta
+                            </span>
+                          ) : camp.failedCount > 0 ? (
+                            <span className="badge badge-red">{camp.failedCount} Failed</span>
+                          ) : (
+                            <span className="badge badge-secondary">
+                              {camp.deliveredCount || 0} Delivered
+                            </span>
+                          )}
                         </td>
                         <td>
                           <span className="badge badge-purple" style={{ fontWeight: 700 }}>
-                            {camp.leadsCount} Inbound Leads
+                            {camp.leadsCount || 0} Inbound Leads
                           </span>
                         </td>
                         <td>
@@ -2397,6 +2538,40 @@ export default function DeveloperCampaignHQ() {
                     </div>
                   </div>
                 </div>
+              </div>
+
+              {/* Interactive Inbound Test Widget */}
+              <div style={{
+                marginTop: '16px',
+                padding: '14px 16px',
+                background: 'white',
+                borderRadius: '12px',
+                border: '1px solid var(--border-subtle)',
+                boxShadow: 'var(--shadow-sm)',
+                textAlign: 'center'
+              }}>
+                <div style={{ fontSize: '0.78rem', fontWeight: 700, color: 'var(--text-main)', marginBottom: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}>
+                  <Sparkles size={14} color="var(--wa-green)" />
+                  <span>Test Inbound Lead Capture Engine</span>
+                </div>
+                <button
+                  type="button"
+                  disabled={simulatingLead}
+                  onClick={handleSimulateInboundLead}
+                  className="btn btn-outline-wa btn-sm"
+                  style={{ width: '100%', justifyContent: 'center', fontSize: '0.82rem', padding: '9px 14px' }}
+                >
+                  <Send size={13} />
+                  <span>{simulatingLead ? 'Simulating Incoming Lead...' : '⚡ Simulate Customer Tap "I am Interested"'}</span>
+                </button>
+                {simFeedback && (
+                  <div style={{ fontSize: '0.76rem', marginTop: '8px', fontWeight: 600, color: simFeedback.startsWith('✅') ? '#059669' : '#dc2626' }}>
+                    {simFeedback}
+                  </div>
+                )}
+                <p style={{ fontSize: '0.7rem', color: 'var(--text-dim)', marginTop: '6px', lineHeight: '1.35' }}>
+                  Sends simulated button reply to webhook. Verifies real-time ingestion into Leads CRM & campaign counters.
+                </p>
               </div>
             </div>
           </div>

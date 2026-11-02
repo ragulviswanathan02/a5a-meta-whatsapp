@@ -47,7 +47,7 @@ export interface CampaignRecipient {
   phone: string;
   name: string;
   variables: Record<string, string>;
-  status: 'sent' | 'delivered' | 'read' | 'failed';
+  status: 'sent' | 'delivered' | 'read' | 'failed' | 'replied';
   error?: string;
   errorCode?: string;
   sentAt?: string;
@@ -55,6 +55,9 @@ export interface CampaignRecipient {
   readAt?: string;
   respondedAt?: string;
   responseContent?: string;
+  buttonClicked?: string;
+  replyMessage?: string;
+  repliedAt?: string;
 }
 
 export interface Campaign {
@@ -63,7 +66,7 @@ export interface Campaign {
   templateId: string;
   templateName: string;
   createdAt: string;
-  status: 'draft' | 'sending' | 'completed' | 'paused';
+  status: 'draft' | 'sending' | 'completed' | 'paused' | 'failed' | 'sent';
   totalCount: number;
   sentCount: number;
   deliveredCount: number;
