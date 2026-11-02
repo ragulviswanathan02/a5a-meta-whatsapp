@@ -204,6 +204,16 @@ export async function dbUpsertCampaign(camp: Campaign): Promise<boolean> {
   }
 }
 
+export async function dbDeleteCampaign(id: string): Promise<boolean> {
+  try {
+    const { error } = await supabase.from('campaigns').delete().eq('id', id);
+    return !error;
+  } catch (err) {
+    console.warn('[Supabase dbDeleteCampaign Error]', err);
+    return false;
+  }
+}
+
 // ==========================================
 // TEMPLATES
 // ==========================================

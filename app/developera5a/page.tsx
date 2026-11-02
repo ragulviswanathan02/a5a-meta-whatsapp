@@ -77,6 +77,7 @@ import { isPortalAuthenticated, logoutPortal, useInactivityTracker } from '@/lib
 import { 
   dbGetCampaigns, 
   dbUpsertCampaign, 
+  dbDeleteCampaign,
   dbGetTemplates, 
   dbUpsertTemplate, 
   dbDeleteTemplate,
@@ -1046,6 +1047,19 @@ export default function DeveloperCampaignHQ() {
     setTimeout(() => setCampFeedback(''), 5500);
   };
 
+  // Delete Campaign
+  const handleDeleteCampaign = async (campaignId: string, campaignName: string) => {
+    if (!confirm(`Are you sure you want to delete campaign "${campaignName}"?`)) return;
+
+    const nextCampaigns = campaigns.filter((c) => c.id !== campaignId);
+    setCampaigns(nextCampaigns);
+    saveStoredCampaigns(nextCampaigns);
+    await dbDeleteCampaign(campaignId);
+
+    setCampFeedback(`🗑️ Campaign "${campaignName}" deleted.`);
+    setTimeout(() => setCampFeedback(''), 3000);
+  };
+
   // Resend to Failed
   const handleResendToFailed = (campaignId: string) => {
     setResending(true);
@@ -1424,10 +1438,21 @@ export default function DeveloperCampaignHQ() {
                           )}
                         </td>
                         <td style={{ textAlign: 'right' }}>
-                          <a href="/" className="btn btn-outline-wa btn-sm">
-                            <span>View Leads</span>
-                            <ChevronRight size={13} />
-                          </a>
+                          <div style={{ display: 'inline-flex', alignItems: 'center', gap: '8px' }}>
+                            <a href="/" className="btn btn-outline-wa btn-sm">
+                              <span>View Leads</span>
+                              <ChevronRight size={13} />
+                            </a>
+                            <button
+                              type="button"
+                              onClick={() => handleDeleteCampaign(camp.id, camp.name)}
+                              className="btn btn-secondary btn-sm"
+                              title="Delete Campaign"
+                              style={{ color: '#ef4444', padding: '5px 8px' }}
+                            >
+                              <Trash2 size={13} />
+                            </button>
+                          </div>
                         </td>
                       </tr>
                     ))
