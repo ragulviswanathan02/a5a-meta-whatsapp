@@ -1082,7 +1082,17 @@ export default function DeveloperCampaignHQ() {
     // If Meta creds are active, broadcast to real numbers
     if (creds.phoneNumberId && creds.accessToken && template) {
       const imgHeader = template.components?.find((c) => c.type === 'HEADER' && c.format === 'IMAGE');
-      const headerImgUrl = imgHeader?.example?.header_handle?.[0];
+      let headerImgUrl: string | undefined = undefined;
+      if (imgHeader) {
+        const handle = imgHeader?.example?.header_handle?.[0];
+        // If handle is an internal scontent WhatsApp link, do not pass it back to Meta as a download link.
+        // Instead, pass the reliable public /api/media link or user's custom direct image URL to prevent Meta Error 131053.
+        if (handle && !handle.includes('scontent.whatsapp.net')) {
+          headerImgUrl = handle;
+        } else {
+          headerImgUrl = 'https://leads.a5automation.com/api/media?id=media_1793600311910_nssqb';
+        }
+      }
 
       for (let i = 0; i < recipients.length; i++) {
         const r = recipients[i];
@@ -1554,15 +1564,13 @@ export default function DeveloperCampaignHQ() {
                             <span className="badge badge-green">
                               ✓ {camp.deliveredCount} Delivered
                             </span>
-                          ) : camp.sentCount > 0 && camp.failedCount === 0 ? (
+                          ) : (camp.sentCount - (camp.failedCount || 0)) > 0 ? (
                             <span className="badge" style={{ background: '#e0f2fe', color: '#0369a1', border: '1px solid #bae6fd', fontWeight: 600 }}>
-                              ⏳ {camp.sentCount} Queued in Meta
+                              ⏳ {camp.sentCount - (camp.failedCount || 0)} Queued in Meta
                             </span>
-                          ) : camp.failedCount > 0 ? (
-                            <span className="badge badge-red">{camp.failedCount} Failed</span>
                           ) : (
-                            <span className="badge badge-secondary">
-                              {camp.deliveredCount || 0} Delivered
+                            <span className="badge badge-secondary" style={{ opacity: 0.7 }}>
+                              0 Delivered
                             </span>
                           )}
                         </td>
@@ -1573,7 +1581,13 @@ export default function DeveloperCampaignHQ() {
                         </td>
                         <td>
                           {camp.failedCount > 0 ? (
-                            <span className="badge badge-red">{camp.failedCount} Failed</span>
+                            <span
+                              className="badge badge-red"
+                              title={camp.recipients?.find(r => r.error)?.error || 'Delivery failed'}
+                              style={{ cursor: 'pointer' }}
+                            >
+                              ✕ {camp.failedCount} Failed
+                            </span>
                           ) : (
                             <span className="badge badge-green">0 Failed</span>
                           )}
