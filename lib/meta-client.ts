@@ -81,6 +81,65 @@ export async function submitTemplateToMeta(
     throw new Error('WhatsApp Business Account ID (WABA ID) and Access Token are required to submit templates.');
   }
 
+  // 1. Clean components: strip emojis from button text (Meta rejects emojis in button text)
+  const cleanedComponents = templateData.components.map((c) => {
+    if (c.type === 'BUTTONS' && c.buttons) {
+      return {
+        ...c,
+        buttons: c.buttons.map((b) => ({
+          ...b,
+          text: b.text.replace(/[\uD800-\uDBFF][\uDC00-\uDFFF]|[\u2600-\u27BF]/g, '').trim(),
+          phone_number: b.phone_number ? b.phone_number.replace(/[^0-9+]/g, '') : undefined,
+        })),
+      };
+    }
+    return c;
+  });
+
+  // 2. Prepare Image header handle if required
+  const imageHeader = cleanedComponents.find((c) => c.type === 'HEADER' && c.format === 'IMAGE');
+  if (imageHeader) {
+    const rawUrl = imageHeader.example?.header_handle?.[0];
+    if (rawUrl && !rawUrl.startsWith('4:')) {
+      try {
+        const imgRes = await fetch(rawUrl);
+        if (imgRes.ok) {
+          const imgBuffer = Buffer.from(await imgRes.arrayBuffer());
+          const mimeType = imgRes.headers.get('content-type') || 'image/jpeg';
+
+          // Get app ID from access token
+          const appRes = await fetch(`${BASE_GRAPH_URL}/app?access_token=${creds.accessToken}`);
+          const appData = await appRes.json();
+          const appId = appData?.id || '1613970426886499';
+
+          // Create Meta resumable upload session
+          const uploadInitRes = await fetch(
+            `${BASE_GRAPH_URL}/${appId}/uploads?file_length=${imgBuffer.length}&file_type=${mimeType}&access_token=${creds.accessToken}`,
+            { method: 'POST' }
+          );
+          const uploadInit = await uploadInitRes.json();
+
+          if (uploadInit.id) {
+            const uploadRes = await fetch(`${BASE_GRAPH_URL}/${uploadInit.id}`, {
+              method: 'POST',
+              headers: {
+                Authorization: `OAuth ${creds.accessToken}`,
+                file_offset: '0',
+              },
+              body: imgBuffer,
+            });
+            const uploadResult = await uploadRes.json();
+            if (uploadResult.h) {
+              imageHeader.example = { header_handle: [uploadResult.h] };
+            }
+          }
+        }
+      } catch (err) {
+        console.warn('Failed to upload image sample handle to Meta:', err);
+      }
+    }
+  }
+
   const url = `${BASE_GRAPH_URL}/${creds.wabaId}/message_templates`;
 
   const response = await fetch(url, {
@@ -89,12 +148,16 @@ export async function submitTemplateToMeta(
       Authorization: `Bearer ${creds.accessToken}`,
       'Content-Type': 'application/json',
     },
-    body: JSON.stringify(templateData),
+    body: JSON.stringify({
+      ...templateData,
+      components: cleanedComponents,
+    }),
   });
 
   const resJson = await response.json();
   if (!response.ok || resJson.error) {
-    throw new Error(resJson.error?.message || 'Failed to submit template to Meta.');
+    const errorMsg = resJson.error?.error_user_msg || resJson.error?.message || 'Failed to submit template to Meta.';
+    throw new Error(errorMsg);
   }
 
   return resJson;
