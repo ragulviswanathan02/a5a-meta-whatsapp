@@ -972,6 +972,49 @@ export default function DeveloperCampaignHQ() {
     }
 
     const totalCount = recipients.length;
+    let sentCount = 0;
+    let deliveredCount = 0;
+    let failedCount = 0;
+
+    // If Meta creds are active, broadcast to real numbers
+    if (creds.phoneNumberId && creds.accessToken && template) {
+      const imgHeader = template.components?.find((c) => c.type === 'HEADER' && c.format === 'IMAGE');
+      const headerImgUrl = imgHeader?.example?.header_handle?.[0];
+
+      for (let i = 0; i < recipients.length; i++) {
+        const r = recipients[i];
+        try {
+          const res = await sendWhatsAppTemplateMessage(
+            creds,
+            r.phone,
+            template.name,
+            template.language,
+            [r.name],
+            headerImgUrl
+          );
+          if (res.success) {
+            r.status = 'delivered';
+            r.deliveredAt = new Date().toISOString();
+            deliveredCount++;
+            sentCount++;
+          } else {
+            r.status = 'failed';
+            r.error = res.error;
+            r.errorCode = String(res.code || '');
+            failedCount++;
+          }
+        } catch (e: any) {
+          r.status = 'failed';
+          r.error = e.message;
+          failedCount++;
+        }
+      }
+    } else {
+      // Offline fallback
+      sentCount = totalCount;
+      deliveredCount = totalCount;
+    }
+
     const newCampaign: Campaign = {
       id: `camp-${Date.now()}`,
       name: newCampName.trim(),
@@ -980,26 +1023,13 @@ export default function DeveloperCampaignHQ() {
       createdAt: new Date().toISOString(),
       status: 'completed',
       totalCount,
-      sentCount: totalCount,
-      deliveredCount: totalCount,
+      sentCount,
+      deliveredCount,
       readCount: 0,
       leadsCount: 0,
-      failedCount: 0,
+      failedCount,
       recipients,
     };
-
-    // If Meta creds are active, broadcast to real numbers
-    if (creds.phoneNumberId && creds.accessToken && template) {
-      const imgHeader = template.components?.find((c) => c.type === 'HEADER' && c.format === 'IMAGE');
-      const headerImgUrl = imgHeader?.example?.header_handle?.[0];
-      try {
-        for (const r of recipients.slice(0, 5)) {
-          await sendWhatsAppTemplateMessage(creds, r.phone, template.name, template.language, [r.name], headerImgUrl);
-        }
-      } catch (e) {
-        console.warn('Real Meta dispatch note:', e);
-      }
-    }
 
     const updated = [newCampaign, ...campaigns];
     setCampaigns(updated);
@@ -1007,9 +1037,13 @@ export default function DeveloperCampaignHQ() {
     dbUpsertCampaign(newCampaign);
 
     setLaunchingCamp(false);
-    setCampFeedback(`🎉 Campaign "${newCampName}" blasted successfully to ${totalCount} recipients!`);
+    if (failedCount > 0) {
+      setCampFeedback(`⚠️ Campaign "${newCampName}" completed: ${deliveredCount} delivered, ${failedCount} failed. Check Resend Hub for details.`);
+    } else {
+      setCampFeedback(`🎉 Campaign "${newCampName}" blasted successfully to ${deliveredCount} recipient(s)!`);
+    }
     setNewCampName('');
-    setTimeout(() => setCampFeedback(''), 4500);
+    setTimeout(() => setCampFeedback(''), 5500);
   };
 
   // Resend to Failed
