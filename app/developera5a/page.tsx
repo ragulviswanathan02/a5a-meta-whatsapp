@@ -1050,6 +1050,11 @@ export default function DeveloperCampaignHQ() {
         saveStoredTemplates(syncedList);
         for (const st of syncedList) {
           await dbUpsertTemplate(st);
+          // Automatically pre-cache header image so broadcasts never experience media 404s
+          const hasImageHeader = st.components?.some((c) => c.type === 'HEADER' && c.format === 'IMAGE');
+          if (hasImageHeader && st.id) {
+            fetch(`/api/media?id=tmpl_media_${st.id}`).catch(() => {});
+          }
         }
         alert(`✅ Successfully synced ${syncedList.length} template(s) directly from Meta WhatsApp!`);
       }
