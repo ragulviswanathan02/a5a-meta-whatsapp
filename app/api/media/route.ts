@@ -19,6 +19,65 @@ export async function GET(req: NextRequest) {
       .single();
 
     if (error || !data?.phone_details?.data) {
+      // Dynamic Fallback 1: If requesting tmpl_media_XXX, fetch and cache from template in Supabase
+      if (id.startsWith('tmpl_media_')) {
+        const tmplId = id.replace('tmpl_media_', '');
+        const { data: tmplData } = await supabase
+          .from('whatsapp_templates')
+          .select('components')
+          .eq('id', tmplId)
+          .single();
+
+        const imgHandle = tmplData?.components?.find((c: any) => c.type === 'HEADER' && c.format === 'IMAGE')?.example?.header_handle?.[0];
+        if (imgHandle) {
+          try {
+            const fetchRes = await fetch(imgHandle);
+            if (fetchRes.ok) {
+              const arrayBuf = await fetchRes.arrayBuffer();
+              const buf = Buffer.from(arrayBuf);
+              const b64 = `data:image/png;base64,${buf.toString('base64')}`;
+              // Cache into meta_credentials
+              await supabase.from('meta_credentials').upsert({
+                id,
+                status: 'active',
+                phone_details: { data: b64, mimeType: 'image/png', createdAt: new Date().toISOString() },
+                updated_at: new Date().toISOString(),
+              });
+              return new NextResponse(buf, {
+                status: 200,
+                headers: {
+                  'Content-Type': 'image/png',
+                  'Cache-Control': 'public, max-age=31536000, immutable',
+                  'Content-Length': buf.length.toString(),
+                },
+              });
+            }
+          } catch (fetchErr) {
+            console.warn('[Media Fallback Fetch Error]', fetchErr);
+          }
+        }
+      }
+
+      // Dynamic Fallback 2: Serve default active A5 Automation poster tmpl_media_1656740342749388
+      const { data: defMedia } = await supabase
+        .from('meta_credentials')
+        .select('phone_details')
+        .eq('id', 'tmpl_media_1656740342749388')
+        .single();
+
+      if (defMedia?.phone_details?.data) {
+        const cleanBase64 = defMedia.phone_details.data.replace(/^data:image\/\w+;base64,/, '');
+        const buffer = Buffer.from(cleanBase64, 'base64');
+        return new NextResponse(buffer, {
+          status: 200,
+          headers: {
+            'Content-Type': 'image/png',
+            'Cache-Control': 'public, max-age=31536000, immutable',
+            'Content-Length': buffer.length.toString(),
+          },
+        });
+      }
+
       return new NextResponse('Image not found', { status: 404 });
     }
 
