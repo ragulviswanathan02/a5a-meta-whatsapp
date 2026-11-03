@@ -34,7 +34,8 @@ import {
   Calendar,
   Mail,
   Share2,
-  Award
+  Award,
+  RotateCcw
 } from 'lucide-react';
 import { Lead, FormLead } from '@/lib/types';
 import { 
@@ -85,78 +86,84 @@ export default function LeadsDashboard() {
   const [formYearFilter, setFormYearFilter] = useState('all');
   const [formStatusFilter, setFormStatusFilter] = useState('all');
   const [copiedLink, setCopiedLink] = useState(false);
+  const [isSyncing, setIsSyncing] = useState(false);
 
-  // Silent Auto-Load Functions (no UI flickering)
-  const loadLeadsSilently = async () => {
+  // Fresh Cloud Fetch with Persistence
+  const refreshAllLeads = async (silent = false) => {
+    if (!silent) setIsSyncing(true);
     try {
-      const cloudLeads = await dbGetLeads();
+      const [cloudLeads, cloudFormLeads] = await Promise.all([
+        dbGetLeads(),
+        dbGetFormLeads(),
+      ]);
+
       if (cloudLeads && Array.isArray(cloudLeads)) {
         setLeads(cloudLeads);
         saveStoredLeads(cloudLeads);
       }
-    } catch (err) {
-      // quiet fallback
-    }
-  };
-
-  const loadFormLeadsSilently = async () => {
-    try {
-      const cloudFormLeads = await dbGetFormLeads();
       if (cloudFormLeads && Array.isArray(cloudFormLeads)) {
         setFormLeads(cloudFormLeads);
         saveStoredFormLeads(cloudFormLeads);
       }
     } catch (err) {
-      // quiet fallback
+      console.warn('[LeadsDashboard Refresh Error]', err);
+    } finally {
+      if (!silent) setIsSyncing(false);
+      setLoading(false);
     }
   };
 
+  // 1. Initial auth check & seed from local storage on mount
   useEffect(() => {
     const authed = isPortalAuthenticated('leads');
     setIsAuthenticated(authed);
 
-    if (authed) {
-      // 1. Initial Load from Local Cache & Cloud
-      setLeads(getStoredLeads());
-      setFormLeads(getStoredFormLeads());
-      loadLeadsSilently();
-      loadFormLeadsSilently();
+    const cachedLeads = getStoredLeads();
+    const cachedFormLeads = getStoredFormLeads();
+    if (cachedLeads.length > 0) setLeads(cachedLeads);
+    if (cachedFormLeads.length > 0) setFormLeads(cachedFormLeads);
 
-      // 2. Realtime WebSocket Subscription via Supabase
-      const channel = supabase
-        .channel('realtime_leads_and_forms')
-        .on(
-          'postgres_changes',
-          { event: '*', schema: 'public', table: 'leads' },
-          () => {
-            loadLeadsSilently();
-          }
-        )
-        .on(
-          'postgres_changes',
-          { event: '*', schema: 'public', table: 'form_leads' },
-          () => {
-            loadFormLeadsSilently();
-          }
-        )
-        .subscribe();
-
-      // 3. Fallback Auto-Polling (checks every 4 seconds for instant updates without page refresh)
-      const pollTimer = setInterval(() => {
-        loadLeadsSilently();
-        loadFormLeadsSilently();
-      }, 4000);
-
-      setLoading(false);
-
-      return () => {
-        supabase.removeChannel(channel);
-        clearInterval(pollTimer);
-      };
-    } else {
+    if (!authed) {
       setLoading(false);
     }
   }, []);
+
+  // 2. Realtime listener & auto-sync whenever authenticated (on mount OR right after LoginGate)
+  useEffect(() => {
+    if (!isAuthenticated) return;
+
+    // Immediately fetch fresh cloud leads
+    refreshAllLeads(leads.length > 0 || formLeads.length > 0);
+
+    // Setup Realtime WebSocket Subscription via Supabase
+    const channel = supabase
+      .channel('realtime_leads_and_forms')
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'leads' },
+        () => {
+          refreshAllLeads(true);
+        }
+      )
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'form_leads' },
+        () => {
+          refreshAllLeads(true);
+        }
+      )
+      .subscribe();
+
+    // Fallback Auto-Polling (checks every 5 seconds for instant updates without page refresh)
+    const pollTimer = setInterval(() => {
+      refreshAllLeads(true);
+    }, 5000);
+
+    return () => {
+      supabase.removeChannel(channel);
+      clearInterval(pollTimer);
+    };
+  }, [isAuthenticated]);
 
   const campaigns = useMemo(() => {
     return getStoredCampaigns();
@@ -379,8 +386,12 @@ export default function LeadsDashboard() {
         portal="leads"
         onSuccess={() => {
           setIsAuthenticated(true);
-          setLeads(getStoredLeads());
-          setFormLeads(getStoredFormLeads());
+          const cachedLeads = getStoredLeads();
+          const cachedFormLeads = getStoredFormLeads();
+          if (cachedLeads.length > 0) setLeads(cachedLeads);
+          if (cachedFormLeads.length > 0) setFormLeads(cachedFormLeads);
+          setLoading(cachedLeads.length === 0 && cachedFormLeads.length === 0);
+          refreshAllLeads(false);
         }}
       />
     );
@@ -504,6 +515,17 @@ export default function LeadsDashboard() {
               </div>
 
               <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
+                <button
+                  type="button"
+                  onClick={() => refreshAllLeads(false)}
+                  disabled={isSyncing}
+                  className="btn btn-secondary"
+                  style={{ display: 'flex', alignItems: 'center', gap: '6px' }}
+                  title="Force immediate sync with Supabase Cloud DB"
+                >
+                  <RotateCcw size={15} className={isSyncing ? 'spinner' : ''} />
+                  <span>{isSyncing ? 'Syncing...' : 'Sync Live'}</span>
+                </button>
                 <button onClick={handleExportCSV} className="btn btn-secondary" style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                   <Download size={16} /> Export CSV
                 </button>
@@ -908,6 +930,18 @@ export default function LeadsDashboard() {
                 >
                   <ExternalLink size={16} /> Open Public Form
                 </a>
+
+                <button
+                  type="button"
+                  onClick={() => refreshAllLeads(false)}
+                  disabled={isSyncing}
+                  className="btn btn-secondary"
+                  style={{ display: 'flex', alignItems: 'center', gap: '6px' }}
+                  title="Force immediate sync with Supabase Cloud DB"
+                >
+                  <RotateCcw size={15} className={isSyncing ? 'spinner' : ''} />
+                  <span>{isSyncing ? 'Syncing...' : 'Sync Live'}</span>
+                </button>
 
                 <button
                   onClick={handleExportFormLeadsCSV}

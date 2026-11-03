@@ -332,104 +332,111 @@ export default function DeveloperCampaignHQ() {
     }
   };
 
+  // Load fresh developer records from Supabase Cloud
+  const fetchAllDeveloperData = async () => {
+    try {
+      const [cloudCreds, cloudTmpls, cloudCamps, cloudGroups, cloudContacts] = await Promise.all([
+        dbGetCredentials(),
+        dbGetTemplates(),
+        dbGetCampaigns(),
+        dbGetContactGroups(),
+        dbGetContacts(),
+      ]);
+
+      if (cloudCreds && (cloudCreds.phoneNumberId || cloudCreds.accessToken)) {
+        setCreds(cloudCreds);
+        saveStoredCredentials(cloudCreds);
+      }
+      if (cloudTmpls && cloudTmpls.length > 0) {
+        setTemplates(cloudTmpls);
+        saveStoredTemplates(cloudTmpls);
+        if (!selectedTemplateId) setSelectedTemplateId(cloudTmpls[0].id);
+      }
+      if (cloudCamps && Array.isArray(cloudCamps)) {
+        setCampaigns(cloudCamps);
+        saveStoredCampaigns(cloudCamps);
+      }
+      if (cloudGroups && cloudGroups.length > 0) {
+        setGroups(cloudGroups);
+        saveStoredContactGroups(cloudGroups);
+        setSingleGroupId(cloudGroups[0].id);
+        setBulkGroupId(cloudGroups[0].id);
+        setTargetGroupId(cloudGroups[0].id);
+      }
+      if (cloudContacts && cloudContacts.length > 0) {
+        setContacts(cloudContacts);
+        saveStoredContacts(cloudContacts);
+      }
+    } catch (err) {
+      console.warn('[DeveloperHQ Fetch Error]', err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // 1. Initial auth check & seed from local storage on mount
   useEffect(() => {
     const authed = isPortalAuthenticated('developer');
     setIsAuthenticated(authed);
-    if (authed) {
-      setCreds(getStoredCredentials());
-      
-      // Load initial local data
-      const loadedTemplates = getStoredTemplates();
-      setTemplates(loadedTemplates);
-      if (loadedTemplates.length > 0 && !selectedTemplateId) {
-        setSelectedTemplateId(loadedTemplates[0].id);
-      }
-      setCampaigns(getStoredCampaigns());
-      const loadedGroups = getStoredContactGroups();
-      setGroups(loadedGroups);
-      if (loadedGroups.length > 0) {
-        setSingleGroupId(loadedGroups[0].id);
-        setBulkGroupId(loadedGroups[0].id);
-        setTargetGroupId(loadedGroups[0].id);
-      }
-      setContacts(getStoredContacts());
+    setCreds(getStoredCredentials());
 
-      // Fetch cloud records from Supabase
-      dbGetCredentials().then((cloudCreds) => {
-        if (cloudCreds && (cloudCreds.phoneNumberId || cloudCreds.accessToken)) {
-          setCreds(cloudCreds);
-          saveStoredCredentials(cloudCreds);
-        }
-      });
+    const loadedTemplates = getStoredTemplates();
+    setTemplates(loadedTemplates);
+    if (loadedTemplates.length > 0 && !selectedTemplateId) {
+      setSelectedTemplateId(loadedTemplates[0].id);
+    }
+    setCampaigns(getStoredCampaigns());
+    const loadedGroups = getStoredContactGroups();
+    setGroups(loadedGroups);
+    if (loadedGroups.length > 0) {
+      setSingleGroupId(loadedGroups[0].id);
+      setBulkGroupId(loadedGroups[0].id);
+      setTargetGroupId(loadedGroups[0].id);
+    }
+    setContacts(getStoredContacts());
 
-      dbGetTemplates().then((cloudTmpls) => {
-        if (cloudTmpls && cloudTmpls.length > 0) {
-          setTemplates(cloudTmpls);
-          saveStoredTemplates(cloudTmpls);
-          if (!selectedTemplateId) setSelectedTemplateId(cloudTmpls[0].id);
-        }
-      });
-
-      const loadCampaignsSilently = async () => {
-        try {
-          const cloudCamps = await dbGetCampaigns();
-          if (cloudCamps && Array.isArray(cloudCamps)) {
-            setCampaigns(cloudCamps);
-            saveStoredCampaigns(cloudCamps);
-          }
-        } catch {}
-      };
-
-      dbGetCampaigns().then((cloudCamps) => {
-        if (cloudCamps && cloudCamps.length > 0) {
-          setCampaigns(cloudCamps);
-          saveStoredCampaigns(cloudCamps);
-        }
-      });
-
-      // Realtime subscription for live campaign updates (delivery status & inbound leads)
-      const campChannel = supabase
-        .channel('realtime_developer_campaigns')
-        .on(
-          'postgres_changes',
-          { event: '*', schema: 'public', table: 'campaigns' },
-          () => {
-            loadCampaignsSilently();
-          }
-        )
-        .subscribe();
-
-      const pollTimer = setInterval(() => {
-        loadCampaignsSilently();
-      }, 4000);
-
-      dbGetContactGroups().then((cloudGroups) => {
-        if (cloudGroups && cloudGroups.length > 0) {
-          setGroups(cloudGroups);
-          saveStoredContactGroups(cloudGroups);
-          setSingleGroupId(cloudGroups[0].id);
-          setBulkGroupId(cloudGroups[0].id);
-          setTargetGroupId(cloudGroups[0].id);
-        }
-      });
-
-      dbGetContacts().then((cloudContacts) => {
-        if (cloudContacts && cloudContacts.length > 0) {
-          setContacts(cloudContacts);
-          saveStoredContacts(cloudContacts);
-        }
-      });
-
-      setLoading(false);
-
-      return () => {
-        supabase.removeChannel(campChannel);
-        clearInterval(pollTimer);
-      };
-    } else {
+    if (!authed) {
       setLoading(false);
     }
   }, []);
+
+  // 2. Realtime listener & auto-sync whenever authenticated (on mount OR right after LoginGate)
+  useEffect(() => {
+    if (!isAuthenticated) return;
+
+    fetchAllDeveloperData();
+
+    const loadCampaignsSilently = async () => {
+      try {
+        const cloudCamps = await dbGetCampaigns();
+        if (cloudCamps && Array.isArray(cloudCamps)) {
+          setCampaigns(cloudCamps);
+          saveStoredCampaigns(cloudCamps);
+        }
+      } catch {}
+    };
+
+    // Realtime subscription for live campaign updates (delivery status & inbound leads)
+    const campChannel = supabase
+      .channel('realtime_developer_campaigns')
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'campaigns' },
+        () => {
+          loadCampaignsSilently();
+        }
+      )
+      .subscribe();
+
+    const pollTimer = setInterval(() => {
+      loadCampaignsSilently();
+    }, 4000);
+
+    return () => {
+      supabase.removeChannel(campChannel);
+      clearInterval(pollTimer);
+    };
+  }, [isAuthenticated]);
 
   // Variable detection from body text and header text
   const detectedVariables = React.useMemo(() => {
@@ -1383,11 +1390,8 @@ export default function DeveloperCampaignHQ() {
         portal="developer"
         onSuccess={() => {
           setIsAuthenticated(true);
-          setCreds(getStoredCredentials());
-          setTemplates(getStoredTemplates());
-          setCampaigns(getStoredCampaigns());
-          setGroups(getStoredContactGroups());
-          setContacts(getStoredContacts());
+          setLoading(true);
+          fetchAllDeveloperData();
         }}
       />
     );
