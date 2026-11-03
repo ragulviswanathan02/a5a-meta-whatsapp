@@ -240,7 +240,7 @@ export default function DeveloperCampaignHQ() {
 
   // Campaign Delivery Breakdown Modal state
   const [breakdownCampaign, setBreakdownCampaign] = useState<Campaign | null>(null);
-  const [breakdownFilter, setBreakdownFilter] = useState<'all' | 'delivered' | 'read' | 'failed' | 'sent'>('all');
+  const [breakdownFilter, setBreakdownFilter] = useState<'all' | 'delivered' | 'read' | 'failed' | 'sent' | 'replied'>('all');
   const [breakdownSearch, setBreakdownSearch] = useState('');
 
   // Live Pacing & Progress State
@@ -3277,7 +3277,7 @@ export default function DeveloperCampaignHQ() {
                 </button>
                 <button
                   type="button"
-                  onClick={() => setBreakdownFilter('delivered')}
+                  onClick={() => setBreakdownFilter('replied')}
                   style={{
                     padding: '6px 14px',
                     borderRadius: '20px',
@@ -3285,12 +3285,12 @@ export default function DeveloperCampaignHQ() {
                     fontWeight: 600,
                     cursor: 'pointer',
                     border: '1px solid',
-                    borderColor: breakdownFilter === 'delivered' ? '#10b981' : '#e2e8f0',
-                    background: breakdownFilter === 'delivered' ? '#ecfdf5' : '#ffffff',
-                    color: breakdownFilter === 'delivered' ? '#047857' : 'var(--text-muted)',
+                    borderColor: breakdownFilter === 'replied' ? '#8b5cf6' : '#e2e8f0',
+                    background: breakdownFilter === 'replied' ? '#f5f3ff' : '#ffffff',
+                    color: breakdownFilter === 'replied' ? '#7c3aed' : 'var(--text-muted)',
                   }}
                 >
-                  ✓ Delivered ({breakdownCampaign.recipients?.filter(r => r.status === 'delivered' || r.status === 'read').length || breakdownCampaign.deliveredCount})
+                  🎯 Replied / Leads ({breakdownCampaign.recipients?.filter(r => r.status === 'replied').length || breakdownCampaign.leadsCount || 0})
                 </button>
                 <button
                   type="button"
@@ -3307,7 +3307,24 @@ export default function DeveloperCampaignHQ() {
                     color: breakdownFilter === 'read' ? '#1d4ed8' : 'var(--text-muted)',
                   }}
                 >
-                  👁️ Read ({breakdownCampaign.recipients?.filter(r => r.status === 'read').length || breakdownCampaign.readCount || 0})
+                  👁️ Read ({breakdownCampaign.recipients?.filter(r => r.status === 'read' || r.status === 'replied').length || breakdownCampaign.readCount || 0})
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setBreakdownFilter('delivered')}
+                  style={{
+                    padding: '6px 14px',
+                    borderRadius: '20px',
+                    fontSize: '0.8rem',
+                    fontWeight: 600,
+                    cursor: 'pointer',
+                    border: '1px solid',
+                    borderColor: breakdownFilter === 'delivered' ? '#10b981' : '#e2e8f0',
+                    background: breakdownFilter === 'delivered' ? '#ecfdf5' : '#ffffff',
+                    color: breakdownFilter === 'delivered' ? '#047857' : 'var(--text-muted)',
+                  }}
+                >
+                  ✓ Delivered ({breakdownCampaign.recipients?.filter(r => r.status === 'delivered' || r.status === 'read' || r.status === 'replied').length || breakdownCampaign.deliveredCount})
                 </button>
                 <button
                   type="button"
@@ -3369,8 +3386,9 @@ export default function DeveloperCampaignHQ() {
             <div style={{ overflowY: 'auto', flex: 1, padding: '0 24px' }}>
               {(() => {
                 const list = (breakdownCampaign.recipients || []).filter((r) => {
-                  if (breakdownFilter === 'delivered') return r.status === 'delivered' || r.status === 'read';
-                  if (breakdownFilter === 'read') return r.status === 'read';
+                  if (breakdownFilter === 'replied') return r.status === 'replied';
+                  if (breakdownFilter === 'read') return r.status === 'read' || r.status === 'replied';
+                  if (breakdownFilter === 'delivered') return r.status === 'delivered' || r.status === 'read' || r.status === 'replied';
                   if (breakdownFilter === 'failed') return r.status === 'failed';
                   if (breakdownFilter === 'sent') return r.status === 'sent';
                   return true;
@@ -3413,7 +3431,11 @@ export default function DeveloperCampaignHQ() {
                             </code>
                           </td>
                           <td>
-                            {r.status === 'read' ? (
+                            {r.status === 'replied' ? (
+                              <span className="badge badge-purple" style={{ fontSize: '0.74rem', background: '#f5f3ff', color: '#7c3aed', border: '1px solid #ddd6fe', fontWeight: 700 }}>
+                                🎯 Replied &quot;{r.buttonClicked || 'Interested'}&quot;
+                              </span>
+                            ) : r.status === 'read' ? (
                               <span className="badge badge-purple" style={{ fontSize: '0.74rem' }}>
                                 👁️ Read
                               </span>
@@ -3425,19 +3447,29 @@ export default function DeveloperCampaignHQ() {
                               <span className="badge" style={{ background: '#e0f2fe', color: '#0369a1', border: '1px solid #bae6fd', fontSize: '0.74rem', fontWeight: 600 }}>
                                 ⏳ Queued in Meta
                               </span>
-                            ) : (
+                            ) : r.status === 'failed' ? (
                               <span className="badge badge-red" style={{ fontSize: '0.74rem' }}>
                                 ✕ Failed
+                              </span>
+                            ) : (
+                              <span className="badge badge-secondary" style={{ fontSize: '0.74rem' }}>
+                                {r.status || 'Pending'}
                               </span>
                             )}
                           </td>
                           <td style={{ fontSize: '0.75rem', color: 'var(--text-dim)', whiteSpace: 'nowrap' }}>
-                            {r.readAt ? `Read: ${new Date(r.readAt).toLocaleTimeString()}` :
+                            {r.repliedAt ? `Replied: ${new Date(r.repliedAt).toLocaleTimeString()}` :
+                             r.readAt ? `Read: ${new Date(r.readAt).toLocaleTimeString()}` :
                              r.deliveredAt ? `Delivered: ${new Date(r.deliveredAt).toLocaleTimeString()}` :
                              r.sentAt ? `Sent: ${new Date(r.sentAt).toLocaleTimeString()}` : '—'}
                           </td>
                           <td style={{ fontSize: '0.78rem' }}>
-                            {r.status === 'failed' ? (
+                            {r.status === 'replied' ? (
+                              <span style={{ color: '#7c3aed', display: 'flex', alignItems: 'center', gap: '4px', fontWeight: 600 }}>
+                                <Sparkles size={13} />
+                                Inbound Lead Generated! Recipient clicked &quot;{r.buttonClicked || 'I am Interested'}&quot;
+                              </span>
+                            ) : r.status === 'failed' ? (
                               <div style={{ padding: '6px 10px', background: '#fef2f2', border: '1px solid #fecaca', borderRadius: '6px' }}>
                                 <div style={{ fontWeight: 700, color: '#b91c1c', display: 'flex', alignItems: 'center', gap: '4px' }}>
                                   <AlertCircle size={13} />
