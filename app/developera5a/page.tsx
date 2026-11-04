@@ -1707,84 +1707,91 @@ export default function DeveloperCampaignHQ() {
                       </td>
                     </tr>
                   ) : (
-                    campaigns.map((camp) => (
-                      <tr key={camp.id}>
-                        <td>
-                          <div style={{ fontWeight: 700, color: 'var(--text-main)', fontSize: '0.95rem' }}>{camp.name}</div>
-                          <div style={{ fontSize: '0.76rem', color: 'var(--text-dim)', marginTop: '2px' }}>
-                            Template: <code>{camp.templateName}</code> • {new Date(camp.createdAt).toLocaleDateString()}
-                          </div>
-                        </td>
-                        <td>
-                          <button
-                            type="button"
-                            onClick={() => {
-                              setBreakdownCampaign(camp);
-                              setBreakdownFilter('all');
-                            }}
-                            className="badge badge-secondary"
-                            style={{ cursor: 'pointer', fontWeight: 700, background: '#f1f5f9', border: '1px solid #cbd5e1' }}
-                            title="Click to view all recipients"
-                          >
-                            {camp.totalCount} Contacts
-                          </button>
-                        </td>
-                        <td>
-                          {camp.deliveredCount > 0 ? (
+                    campaigns.map((camp) => {
+                      const totalCount = camp.recipients?.length || camp.totalCount || 0;
+                      const deliveredCount = camp.recipients?.filter(r => r.status === 'delivered' || r.status === 'read' || r.status === 'replied').length ?? (camp.deliveredCount || 0);
+                      const leadsCount = camp.recipients?.filter(r => r.status === 'replied').length ?? (camp.leadsCount || 0);
+                      const failedCount = camp.recipients?.filter(r => r.status === 'failed').length ?? (camp.failedCount || 0);
+                      const queuedCount = camp.recipients?.filter(r => r.status === 'sent').length ?? Math.max(0, totalCount - deliveredCount - failedCount);
+
+                      return (
+                        <tr key={camp.id}>
+                          <td>
+                            <div style={{ fontWeight: 700, color: 'var(--text-main)', fontSize: '0.95rem' }}>{camp.name}</div>
+                            <div style={{ fontSize: '0.76rem', color: 'var(--text-dim)', marginTop: '2px' }}>
+                              Template: <code>{camp.templateName}</code> • {new Date(camp.createdAt).toLocaleDateString()}
+                            </div>
+                          </td>
+                          <td>
                             <button
                               type="button"
                               onClick={() => {
                                 setBreakdownCampaign(camp);
-                                setBreakdownFilter('delivered');
+                                setBreakdownFilter('all');
                               }}
-                              className="badge badge-green"
-                              style={{ cursor: 'pointer', border: 'none' }}
-                              title="Click to view delivered recipients"
+                              className="badge badge-secondary"
+                              style={{ cursor: 'pointer', fontWeight: 700, background: '#f1f5f9', border: '1px solid #cbd5e1' }}
+                              title="Click to view all recipients"
                             >
-                              ✓ {camp.deliveredCount} Delivered
+                              {totalCount} Contacts
                             </button>
-                          ) : (camp.sentCount - (camp.failedCount || 0)) > 0 ? (
-                            <button
-                              type="button"
-                              onClick={() => {
-                                setBreakdownCampaign(camp);
-                                setBreakdownFilter('sent');
-                              }}
-                              className="badge"
-                              style={{ background: '#e0f2fe', color: '#0369a1', border: '1px solid #bae6fd', fontWeight: 600, cursor: 'pointer' }}
-                              title="Click to view queued messages in Meta"
-                            >
-                              ⏳ {camp.sentCount - (camp.failedCount || 0)} Queued in Meta
-                            </button>
-                          ) : (
-                            <span className="badge badge-secondary" style={{ opacity: 0.7 }}>
-                              0 Delivered
+                          </td>
+                          <td>
+                            {deliveredCount > 0 ? (
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setBreakdownCampaign(camp);
+                                  setBreakdownFilter('delivered');
+                                }}
+                                className="badge badge-green"
+                                style={{ cursor: 'pointer', border: 'none' }}
+                                title="Click to view delivered recipients"
+                              >
+                                ✓ {deliveredCount} Delivered
+                              </button>
+                            ) : queuedCount > 0 ? (
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setBreakdownCampaign(camp);
+                                  setBreakdownFilter('sent');
+                                }}
+                                className="badge"
+                                style={{ background: '#e0f2fe', color: '#0369a1', border: '1px solid #bae6fd', fontWeight: 600, cursor: 'pointer' }}
+                                title="Click to view queued messages in Meta"
+                              >
+                                ⏳ {queuedCount} Queued in Meta
+                              </button>
+                            ) : (
+                              <span className="badge badge-secondary" style={{ opacity: 0.7 }}>
+                                0 Delivered
+                              </span>
+                            )}
+                          </td>
+                          <td>
+                            <span className="badge badge-purple" style={{ fontWeight: 700 }}>
+                              {leadsCount} Inbound Leads
                             </span>
-                          )}
-                        </td>
-                        <td>
-                          <span className="badge badge-purple" style={{ fontWeight: 700 }}>
-                            {camp.leadsCount || 0} Inbound Leads
-                          </span>
-                        </td>
-                        <td>
-                          {camp.failedCount > 0 ? (
-                            <button
-                              type="button"
-                              onClick={() => {
-                                setBreakdownCampaign(camp);
-                                setBreakdownFilter('failed');
-                              }}
-                              className="badge badge-red"
-                              title={`Click to inspect Meta failure reasons: ${camp.recipients?.find(r => r.error)?.error || 'Delivery failed'}`}
-                              style={{ cursor: 'pointer', border: 'none' }}
-                            >
-                              ✕ {camp.failedCount} Failed
-                            </button>
-                          ) : (
-                            <span className="badge badge-green">0 Failed</span>
-                          )}
-                        </td>
+                          </td>
+                          <td>
+                            {failedCount > 0 ? (
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setBreakdownCampaign(camp);
+                                  setBreakdownFilter('failed');
+                                }}
+                                className="badge badge-red"
+                                title={`Click to inspect Meta failure reasons: ${camp.recipients?.find(r => r.error)?.error || 'Delivery failed'}`}
+                                style={{ cursor: 'pointer', border: 'none' }}
+                              >
+                                ✕ {failedCount} Failed
+                              </button>
+                            ) : (
+                              <span className="badge badge-green">0 Failed</span>
+                            )}
+                          </td>
                         <td style={{ textAlign: 'right' }}>
                           <div style={{ display: 'inline-flex', alignItems: 'center', gap: '8px' }}>
                             <button
@@ -1816,8 +1823,9 @@ export default function DeveloperCampaignHQ() {
                           </div>
                         </td>
                       </tr>
-                    ))
-                  )}
+                    );
+                  })
+                )}
                 </tbody>
               </table>
             </div>
@@ -3299,7 +3307,7 @@ export default function DeveloperCampaignHQ() {
                     color: breakdownFilter === 'replied' ? '#7c3aed' : 'var(--text-muted)',
                   }}
                 >
-                  🎯 Replied / Leads ({breakdownCampaign.recipients?.filter(r => r.status === 'replied').length || breakdownCampaign.leadsCount || 0})
+                  🎯 Replied / Leads ({breakdownCampaign.recipients ? breakdownCampaign.recipients.filter(r => r.status === 'replied').length : (breakdownCampaign.leadsCount || 0)})
                 </button>
                 <button
                   type="button"
@@ -3316,7 +3324,7 @@ export default function DeveloperCampaignHQ() {
                     color: breakdownFilter === 'read' ? '#1d4ed8' : 'var(--text-muted)',
                   }}
                 >
-                  👁️ Read ({breakdownCampaign.recipients?.filter(r => r.status === 'read' || r.status === 'replied').length || breakdownCampaign.readCount || 0})
+                  👁️ Read ({breakdownCampaign.recipients ? breakdownCampaign.recipients.filter(r => r.status === 'read' || r.status === 'replied').length : (breakdownCampaign.readCount || 0)})
                 </button>
                 <button
                   type="button"
@@ -3333,7 +3341,7 @@ export default function DeveloperCampaignHQ() {
                     color: breakdownFilter === 'delivered' ? '#047857' : 'var(--text-muted)',
                   }}
                 >
-                  ✓ Delivered ({breakdownCampaign.recipients?.filter(r => r.status === 'delivered' || r.status === 'read' || r.status === 'replied').length || breakdownCampaign.deliveredCount})
+                  ✓ Delivered ({breakdownCampaign.recipients ? breakdownCampaign.recipients.filter(r => r.status === 'delivered' || r.status === 'read' || r.status === 'replied').length : (breakdownCampaign.deliveredCount || 0)})
                 </button>
                 <button
                   type="button"
@@ -3350,7 +3358,7 @@ export default function DeveloperCampaignHQ() {
                     color: breakdownFilter === 'sent' ? '#0369a1' : 'var(--text-muted)',
                   }}
                 >
-                  ⏳ Queued in Meta ({breakdownCampaign.recipients?.filter(r => r.status === 'sent').length || 0})
+                  ⏳ Queued in Meta ({breakdownCampaign.recipients ? breakdownCampaign.recipients.filter(r => r.status === 'sent').length : 0})
                 </button>
                 <button
                   type="button"
@@ -3367,7 +3375,7 @@ export default function DeveloperCampaignHQ() {
                     color: breakdownFilter === 'failed' ? '#b91c1c' : 'var(--text-muted)',
                   }}
                 >
-                  ✕ Failed ({breakdownCampaign.recipients?.filter(r => r.status === 'failed').length || breakdownCampaign.failedCount})
+                  ✕ Failed ({breakdownCampaign.recipients ? breakdownCampaign.recipients.filter(r => r.status === 'failed').length : (breakdownCampaign.failedCount || 0)})
                 </button>
               </div>
 
@@ -3523,7 +3531,7 @@ export default function DeveloperCampaignHQ() {
               justifyContent: 'space-between',
             }}>
               <div>
-                {breakdownCampaign.failedCount > 0 && (
+                {(breakdownCampaign.recipients ? breakdownCampaign.recipients.filter(r => r.status === 'failed').length : (breakdownCampaign.failedCount || 0)) > 0 && (
                   <button
                     type="button"
                     onClick={() => handleResendToFailed(breakdownCampaign.id)}
@@ -3532,7 +3540,7 @@ export default function DeveloperCampaignHQ() {
                     style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}
                   >
                     <RotateCcw size={14} />
-                    <span>{resending ? 'Retrying Failed Contacts...' : `1-Click Resend to ${breakdownCampaign.failedCount} Failed Contacts`}</span>
+                    <span>{resending ? 'Retrying Failed Contacts...' : `1-Click Resend to ${breakdownCampaign.recipients ? breakdownCampaign.recipients.filter(r => r.status === 'failed').length : breakdownCampaign.failedCount} Failed Contacts`}</span>
                   </button>
                 )}
               </div>

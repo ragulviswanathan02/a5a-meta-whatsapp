@@ -239,28 +239,36 @@ export async function POST(request: NextRequest) {
               if (status === 'delivered') {
                 rMatch.status = 'delivered';
                 rMatch.deliveredAt = new Date().toISOString();
-                const newDelivered = recipients.filter((r: any) => r.status === 'delivered').length;
-                await supabase
-                  .from('campaigns')
-                  .update({ delivered_count: newDelivered, recipients })
-                  .eq('id', camp.id);
+                rMatch.error = undefined;
+                rMatch.errorCode = undefined;
               } else if (status === 'failed') {
                 rMatch.status = 'failed';
                 rMatch.error = error ? `Meta Error ${error.code}: ${error.message}` : 'Meta delivery failed';
-                const newFailed = recipients.filter((r: any) => r.status === 'failed').length;
-                await supabase
-                  .from('campaigns')
-                  .update({ failed_count: newFailed, recipients })
-                  .eq('id', camp.id);
+                rMatch.errorCode = error ? String(error.code) : undefined;
               } else if (status === 'read') {
                 rMatch.status = 'read';
                 rMatch.readAt = new Date().toISOString();
-                const newRead = recipients.filter((r: any) => r.status === 'read').length;
-                await supabase
-                  .from('campaigns')
-                  .update({ read_count: newRead, recipients })
-                  .eq('id', camp.id);
+                rMatch.error = undefined;
+                rMatch.errorCode = undefined;
               }
+
+              // Compute true cumulative funnel counts
+              const newDelivered = recipients.filter((r: any) => r.status === 'delivered' || r.status === 'read' || r.status === 'replied').length;
+              const newRead = recipients.filter((r: any) => r.status === 'read' || r.status === 'replied').length;
+              const newFailed = recipients.filter((r: any) => r.status === 'failed').length;
+              const newReplied = recipients.filter((r: any) => r.status === 'replied').length;
+
+              await supabase
+                .from('campaigns')
+                .update({
+                  delivered_count: newDelivered,
+                  read_count: newRead,
+                  failed_count: newFailed,
+                  leads_count: newReplied,
+                  recipients,
+                })
+                .eq('id', camp.id);
+
               break;
             }
           }
