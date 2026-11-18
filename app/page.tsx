@@ -37,7 +37,8 @@ import {
   Award,
   RotateCcw,
   Briefcase,
-  Landmark
+  Landmark,
+  QrCode
 } from 'lucide-react';
 import { Lead, FormLead } from '@/lib/types';
 import { 
@@ -97,6 +98,7 @@ export default function LeadsDashboard() {
   const [seminarCareerFilter, setSeminarCareerFilter] = useState('all');
   const [seminarStatusFilter, setSeminarStatusFilter] = useState('all');
   const [copiedSeminarLink, setCopiedSeminarLink] = useState(false);
+  const [isQrModalOpen, setIsQrModalOpen] = useState(false);
 
   // Fresh Cloud Fetch with Persistence
   const refreshAllLeads = async (silent = false) => {
@@ -1432,6 +1434,16 @@ export default function LeadsDashboard() {
 
                 <button
                   type="button"
+                  onClick={() => setIsQrModalOpen(true)}
+                  className="btn btn-secondary"
+                  style={{ display: 'flex', alignItems: 'center', gap: '6px', color: '#0284c7', borderColor: '#bae6fd' }}
+                >
+                  <QrCode size={16} />
+                  <span>Seminar QR Code</span>
+                </button>
+
+                <button
+                  type="button"
                   onClick={() => refreshAllLeads(false)}
                   disabled={isSyncing}
                   className="btn btn-secondary"
@@ -1796,6 +1808,130 @@ export default function LeadsDashboard() {
         isOpen={isChangePassOpen}
         onClose={() => setIsChangePassOpen(false)}
       />
+
+      {/* Seminar QR Code Modal */}
+      {isQrModalOpen && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          background: 'rgba(15, 23, 42, 0.65)',
+          backdropFilter: 'blur(4px)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 1000,
+          padding: '16px'
+        }}>
+          <div style={{
+            background: '#ffffff',
+            borderRadius: '24px',
+            maxWidth: '440px',
+            width: '100%',
+            padding: '28px 24px',
+            textAlign: 'center',
+            boxShadow: '0 20px 40px rgba(0,0,0,0.2)',
+            border: '1px solid #e2e8f0',
+            position: 'relative'
+          }}>
+            <button
+              onClick={() => setIsQrModalOpen(false)}
+              style={{
+                position: 'absolute',
+                top: '16px',
+                right: '16px',
+                border: 'none',
+                background: '#f1f5f9',
+                color: '#64748b',
+                width: '32px',
+                height: '32px',
+                borderRadius: '50%',
+                cursor: 'pointer',
+                fontSize: '1.1rem',
+                fontWeight: 700,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center'
+              }}
+            >
+              ✕
+            </button>
+
+            <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '4px 12px', background: '#e0f2fe', color: '#0284c7', borderRadius: '20px', fontSize: '0.78rem', fontWeight: 800, marginBottom: '8px' }}>
+              <Landmark size={14} />
+              <span>COLLEGE WORKSHOP QR</span>
+            </div>
+
+            <h3 style={{ fontSize: '1.25rem', fontWeight: 800, color: '#0f172a', marginBottom: '4px' }}>
+              Seminar Registration QR
+            </h3>
+            <p style={{ color: '#64748b', fontSize: '0.84rem', marginBottom: '18px' }}>
+              Display on presentation slides or print on flex banners for students to scan in seminar halls.
+            </p>
+
+            {/* QR Image */}
+            <div style={{
+              background: '#f8fafc',
+              padding: '12px',
+              borderRadius: '20px',
+              display: 'inline-block',
+              border: '1px solid #e2e8f0',
+              marginBottom: '16px'
+            }}>
+              <img
+                src="/seminar/seminar-qr-code.png"
+                alt="A5 Automation Seminar QR Code"
+                style={{
+                  width: '260px',
+                  height: '260px',
+                  display: 'block',
+                  borderRadius: '12px'
+                }}
+              />
+            </div>
+
+            <div style={{
+              fontSize: '0.78rem',
+              color: '#475569',
+              background: '#f1f5f9',
+              padding: '8px 12px',
+              borderRadius: '8px',
+              fontFamily: 'monospace',
+              marginBottom: '20px',
+              wordBreak: 'break-all'
+            }}>
+              https://a5automation.com/seminar/
+            </div>
+
+            <div style={{ display: 'flex', gap: '10px' }}>
+              <a
+                href="/seminar/seminar-qr-code.png"
+                download="A5Automation_Seminar_Registration_QR.png"
+                className="btn btn-primary"
+                style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', background: '#0284c7', borderColor: '#0284c7' }}
+              >
+                <Download size={16} />
+                <span>Download High-Res PNG</span>
+              </a>
+
+              <button
+                type="button"
+                onClick={() => {
+                  navigator.clipboard.writeText('https://a5automation.com/seminar/');
+                  alert('Seminar link copied to clipboard!');
+                }}
+                className="btn btn-secondary"
+                style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}
+                title="Copy Link"
+              >
+                <Copy size={16} />
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

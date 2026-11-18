@@ -768,3 +768,4 @@ export default function SeminarRegistrationPage() {
     </Suspense>
   );
 }
+
