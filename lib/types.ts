@@ -146,7 +146,10 @@ export interface FormLead {
   yearOfStudy: string; // '1st Year' | '2nd Year' | '3rd Year' | 'Final Year' | 'Passed Out' | 'Working Professional'
   courseInterest?: string;
   city?: string;
-  source?: string; // 'instagram' | 'youtube' | 'website' | 'other'
+  source?: string; // 'instagram' | 'youtube' | 'website' | 'seminar' | 'other'
+  employmentStatus?: 'student' | 'seeking_job' | 'working';
+  companyName?: string;
+  designation?: string;
   status: 'new' | 'contacted' | 'counseled' | 'enrolled' | 'lost';
   notes?: LeadNote[];
   createdAt: string;

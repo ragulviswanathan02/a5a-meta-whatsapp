@@ -35,7 +35,9 @@ import {
   Mail,
   Share2,
   Award,
-  RotateCcw
+  RotateCcw,
+  Briefcase,
+  Landmark
 } from 'lucide-react';
 import { Lead, FormLead } from '@/lib/types';
 import { 
@@ -66,7 +68,7 @@ export default function LeadsDashboard() {
   });
 
   // Main Tab Navigation
-  const [activeMainTab, setActiveMainTab] = useState<'campaign_leads' | 'form_leads'>('campaign_leads');
+  const [activeMainTab, setActiveMainTab] = useState<'campaign_leads' | 'form_leads' | 'seminar_leads'>('campaign_leads');
 
   // WhatsApp Campaign Leads States
   const [leads, setLeads] = useState<Lead[]>([]);
@@ -87,6 +89,14 @@ export default function LeadsDashboard() {
   const [formStatusFilter, setFormStatusFilter] = useState('all');
   const [copiedLink, setCopiedLink] = useState(false);
   const [isSyncing, setIsSyncing] = useState(false);
+
+  // Seminar Registrations States
+  const [seminarSearchQuery, setSeminarSearchQuery] = useState('');
+  const [seminarCollegeFilter, setSeminarCollegeFilter] = useState('all');
+  const [seminarDeptFilter, setSeminarDeptFilter] = useState('all');
+  const [seminarCareerFilter, setSeminarCareerFilter] = useState('all');
+  const [seminarStatusFilter, setSeminarStatusFilter] = useState('all');
+  const [copiedSeminarLink, setCopiedSeminarLink] = useState(false);
 
   // Fresh Cloud Fetch with Persistence
   const refreshAllLeads = async (silent = false) => {
@@ -283,24 +293,32 @@ export default function LeadsDashboard() {
   // ==========================================
   // STUDENT FORM LEADS HANDLERS
   // ==========================================
+  const generalFormLeads = useMemo(() => {
+    return formLeads.filter((fl) => fl.source !== 'seminar');
+  }, [formLeads]);
+
+  const seminarLeads = useMemo(() => {
+    return formLeads.filter((fl) => fl.source === 'seminar');
+  }, [formLeads]);
+
   const collegesList = useMemo(() => {
     const set = new Set<string>();
-    formLeads.forEach((fl) => {
+    generalFormLeads.forEach((fl) => {
       if (fl.collegeName) set.add(fl.collegeName);
     });
     return Array.from(set);
-  }, [formLeads]);
+  }, [generalFormLeads]);
 
   const departmentsList = useMemo(() => {
     const set = new Set<string>();
-    formLeads.forEach((fl) => {
+    generalFormLeads.forEach((fl) => {
       if (fl.department) set.add(fl.department);
     });
     return Array.from(set);
-  }, [formLeads]);
+  }, [generalFormLeads]);
 
   const filteredFormLeads = useMemo(() => {
-    return formLeads.filter((fl) => {
+    return generalFormLeads.filter((fl) => {
       const matchQuery =
         fl.name.toLowerCase().includes(formSearchQuery.toLowerCase()) ||
         fl.phone.includes(formSearchQuery) ||
@@ -312,7 +330,7 @@ export default function LeadsDashboard() {
       const matchStatus = formStatusFilter === 'all' || fl.status === formStatusFilter;
       return matchQuery && matchCollege && matchDept && matchYear && matchStatus;
     });
-  }, [formLeads, formSearchQuery, formCollegeFilter, formDeptFilter, formYearFilter, formStatusFilter]);
+  }, [generalFormLeads, formSearchQuery, formCollegeFilter, formDeptFilter, formYearFilter, formStatusFilter]);
 
   const handleUpdateFormLeadStatus = async (leadId: string, newStatus: FormLead['status']) => {
     const updated = formLeads.map((fl) =>
@@ -327,7 +345,7 @@ export default function LeadsDashboard() {
   };
 
   const handleDeleteFormLead = async (leadId: string, leadName: string) => {
-    if (window.confirm(`Are you sure you want to delete student lead "${leadName}"?`)) {
+    if (window.confirm(`Are you sure you want to delete lead "${leadName}"?`)) {
       const updated = formLeads.filter((fl) => fl.id !== leadId);
       setFormLeads(updated);
       saveStoredFormLeads(updated);
@@ -369,12 +387,100 @@ export default function LeadsDashboard() {
   };
 
   // Student Form metrics
-  const totalFormCount = formLeads.length;
-  const freshFormCount = formLeads.filter((fl) => fl.status === 'new').length;
-  const finalYearOrPassedCount = formLeads.filter(
+  const totalFormCount = generalFormLeads.length;
+  const freshFormCount = generalFormLeads.filter((fl) => fl.status === 'new').length;
+  const finalYearOrPassedCount = generalFormLeads.filter(
     (fl) => fl.yearOfStudy.toLowerCase().includes('final') || fl.yearOfStudy.toLowerCase().includes('passed')
   ).length;
-  const enrolledFormCount = formLeads.filter((fl) => fl.status === 'enrolled').length;
+  const enrolledFormCount = generalFormLeads.filter((fl) => fl.status === 'enrolled').length;
+
+  // ==========================================
+  // SEMINAR REGISTRATIONS HANDLERS
+  // ==========================================
+  const seminarCollegesList = useMemo(() => {
+    const set = new Set<string>();
+    seminarLeads.forEach((sl) => {
+      if (sl.collegeName) set.add(sl.collegeName);
+    });
+    return Array.from(set);
+  }, [seminarLeads]);
+
+  const seminarDeptsList = useMemo(() => {
+    const set = new Set<string>();
+    seminarLeads.forEach((sl) => {
+      if (sl.department) set.add(sl.department);
+    });
+    return Array.from(set);
+  }, [seminarLeads]);
+
+  const filteredSeminarLeads = useMemo(() => {
+    return seminarLeads.filter((sl) => {
+      const q = seminarSearchQuery.toLowerCase();
+      const matchQuery =
+        sl.name.toLowerCase().includes(q) ||
+        sl.phone.includes(q) ||
+        sl.email.toLowerCase().includes(q) ||
+        sl.collegeName.toLowerCase().includes(q) ||
+        sl.department.toLowerCase().includes(q) ||
+        (sl.companyName && sl.companyName.toLowerCase().includes(q)) ||
+        (sl.designation && sl.designation.toLowerCase().includes(q));
+
+      const matchCollege = seminarCollegeFilter === 'all' || sl.collegeName === seminarCollegeFilter;
+      const matchDept = seminarDeptFilter === 'all' || sl.department === seminarDeptFilter;
+
+      let matchCareer = true;
+      if (seminarCareerFilter === 'student') {
+        matchCareer = sl.yearOfStudy !== 'Passed Out' && (!sl.employmentStatus || sl.employmentStatus === 'student');
+      } else if (seminarCareerFilter === 'seeking_job') {
+        matchCareer = sl.employmentStatus === 'seeking_job' || (sl.yearOfStudy === 'Passed Out' && sl.employmentStatus !== 'working');
+      } else if (seminarCareerFilter === 'working') {
+        matchCareer = sl.employmentStatus === 'working';
+      }
+
+      const matchStatus = seminarStatusFilter === 'all' || sl.status === seminarStatusFilter;
+      return matchQuery && matchCollege && matchDept && matchCareer && matchStatus;
+    });
+  }, [seminarLeads, seminarSearchQuery, seminarCollegeFilter, seminarDeptFilter, seminarCareerFilter, seminarStatusFilter]);
+
+  // Seminar Metrics
+  const totalSeminarCount = seminarLeads.length;
+  const seminarStudentsCount = seminarLeads.filter((sl) => sl.yearOfStudy !== 'Passed Out' && (!sl.employmentStatus || sl.employmentStatus === 'student')).length;
+  const seminarSeekingCount = seminarLeads.filter((sl) => sl.employmentStatus === 'seeking_job' || (sl.yearOfStudy === 'Passed Out' && sl.employmentStatus !== 'working')).length;
+  const seminarWorkingCount = seminarLeads.filter((sl) => sl.employmentStatus === 'working').length;
+
+  const handleCopySeminarLink = () => {
+    const url = 'https://a5automation.com/seminar/';
+    navigator.clipboard.writeText(url);
+    setCopiedSeminarLink(true);
+    setTimeout(() => setCopiedSeminarLink(false), 2500);
+  };
+
+  const handleExportSeminarCSV = () => {
+    if (filteredSeminarLeads.length === 0) return;
+    const headers = ['Name', 'Phone', 'Email', 'Institution / College', 'Department', 'Year of Study', 'Employment Status', 'Company Name', 'Designation', 'City', 'Status', 'Registered Date'];
+    const rows = filteredSeminarLeads.map((sl) => [
+      `"${sl.name}"`,
+      `"${sl.phone}"`,
+      `"${sl.email}"`,
+      `"${sl.collegeName}"`,
+      `"${sl.department}"`,
+      `"${sl.yearOfStudy}"`,
+      `"${sl.employmentStatus || (sl.yearOfStudy === 'Passed Out' ? 'Seeking Job' : 'Student')}"`,
+      `"${sl.companyName || ''}"`,
+      `"${sl.designation || ''}"`,
+      `"${sl.city || ''}"`,
+      `"${sl.status}"`,
+      `"${new Date(sl.createdAt).toLocaleDateString()}"`,
+    ]);
+    const csvContent = 'data:text/csv;charset=utf-8,' + [headers.join(','), ...rows.map((r) => r.join(','))].join('\n');
+    const encodedUri = encodeURI(csvContent);
+    const link = document.createElement('a');
+    link.setAttribute('href', encodedUri);
+    link.setAttribute('download', `seminar_registrations_${new Date().toISOString().slice(0, 10)}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
 
   if (loading) {
     return <div style={{ minHeight: '100vh', background: 'var(--bg-primary)' }} />;
@@ -488,7 +594,39 @@ export default function LeadsDashboard() {
               padding: '2px 8px',
               borderRadius: '999px',
             }}>
-              {formLeads.length}
+              {generalFormLeads.length}
+            </span>
+          </button>
+
+          <button
+            onClick={() => setActiveMainTab('seminar_leads')}
+            style={{
+              padding: '10px 20px',
+              border: 'none',
+              borderRadius: '12px',
+              background: activeMainTab === 'seminar_leads' ? '#ffffff' : 'transparent',
+              fontWeight: 700,
+              fontSize: '0.92rem',
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px',
+              color: activeMainTab === 'seminar_leads' ? '#0284c7' : 'var(--text-muted)',
+              boxShadow: activeMainTab === 'seminar_leads' ? '0 2px 8px rgba(0, 0, 0, 0.06)' : 'none',
+              transition: 'all 0.2s ease',
+            }}
+          >
+            <Landmark size={18} />
+            <span>Seminar Registrations</span>
+            <span style={{
+              fontSize: '0.72rem',
+              fontWeight: 800,
+              background: activeMainTab === 'seminar_leads' ? '#f0f9ff' : '#e2e8f0',
+              color: activeMainTab === 'seminar_leads' ? '#0284c7' : 'var(--text-muted)',
+              padding: '2px 8px',
+              borderRadius: '999px',
+            }}>
+              {seminarLeads.length}
             </span>
           </button>
         </div>
@@ -1233,6 +1371,390 @@ export default function LeadsDashboard() {
 
                               <button
                                 onClick={() => handleDeleteFormLead(fl.id, fl.name)}
+                                className="btn btn-secondary btn-sm"
+                                style={{ color: '#ef4444' }}
+                                title="Delete Lead"
+                              >
+                                <Trash2 size={13} />
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    })
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )}
+
+        {/* ==================================================================== */}
+        {/* TAB 3: INSTITUTIONAL SEMINAR REGISTRATIONS                          */}
+        {/* ==================================================================== */}
+        {activeMainTab === 'seminar_leads' && (
+          <div>
+            {/* Header Banner */}
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '24px', flexWrap: 'wrap', gap: '16px' }}>
+              <div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                  <h1 style={{ fontSize: '1.75rem', fontWeight: '800', color: 'var(--text-main)', letterSpacing: '-0.02em' }}>
+                    Institutional Seminar Registrations
+                  </h1>
+                  <span className="badge" style={{ background: '#e0f2fe', color: '#0284c7' }}>
+                    <Landmark size={14} /> College Campus &amp; Workshop Leads
+                  </span>
+                </div>
+                <p style={{ color: 'var(--text-muted)', marginTop: '4px', fontSize: '0.9rem' }}>
+                  Attendees captured from college seminar QR codes &amp; presentations, organized with real-time career status tracking.
+                </p>
+              </div>
+
+              <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
+                <button
+                  onClick={handleCopySeminarLink}
+                  className="btn btn-outline"
+                  style={{ display: 'flex', alignItems: 'center', gap: '6px' }}
+                >
+                  {copiedSeminarLink ? <Check size={16} color="#059669" /> : <Copy size={16} />}
+                  <span>{copiedSeminarLink ? 'Link Copied!' : 'Copy Seminar Link (url/seminar)'}</span>
+                </button>
+
+                <a
+                  href="/seminar"
+                  target="_blank"
+                  rel="noreferrer"
+                  className="btn btn-secondary"
+                  style={{ display: 'flex', alignItems: 'center', gap: '6px' }}
+                >
+                  <ExternalLink size={16} /> Open Public Form
+                </a>
+
+                <button
+                  type="button"
+                  onClick={() => refreshAllLeads(false)}
+                  disabled={isSyncing}
+                  className="btn btn-secondary"
+                  style={{ display: 'flex', alignItems: 'center', gap: '6px' }}
+                  title="Force immediate sync with Supabase Cloud DB"
+                >
+                  <RotateCcw size={15} className={isSyncing ? 'spinner' : ''} />
+                  <span>{isSyncing ? 'Syncing...' : 'Sync Live'}</span>
+                </button>
+
+                <button
+                  onClick={handleExportSeminarCSV}
+                  className="btn btn-primary"
+                  style={{ display: 'flex', alignItems: 'center', gap: '6px', background: '#0284c7', borderColor: '#0284c7' }}
+                >
+                  <Download size={16} /> Export Seminar CSV
+                </button>
+              </div>
+            </div>
+
+            {/* KPI Cards for Seminar */}
+            <div className="grid-kpi" style={{ marginBottom: '24px' }}>
+              <div className="kpi-card">
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                  <div>
+                    <div className="kpi-label">TOTAL SEMINAR ATTENDEES</div>
+                    <div className="kpi-value">{totalSeminarCount}</div>
+                    <div className="kpi-trend" style={{ color: '#0284c7' }}>
+                      <Landmark size={14} /> Registered Participants
+                    </div>
+                  </div>
+                  <div className="kpi-icon" style={{ background: '#f0f9ff', color: '#0284c7' }}>
+                    <Users size={22} />
+                  </div>
+                </div>
+              </div>
+
+              <div className="kpi-card">
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                  <div>
+                    <div className="kpi-label">COLLEGE STUDENTS</div>
+                    <div className="kpi-value" style={{ color: '#8b5cf6' }}>{seminarStudentsCount}</div>
+                    <div className="kpi-trend" style={{ color: '#8b5cf6' }}>
+                      <GraduationCap size={14} /> 1st to 4th Year Enrolled
+                    </div>
+                  </div>
+                  <div className="kpi-icon" style={{ background: '#f5f3ff', color: '#8b5cf6' }}>
+                    <GraduationCap size={22} />
+                  </div>
+                </div>
+              </div>
+
+              <div className="kpi-card">
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                  <div>
+                    <div className="kpi-label">SEEKING CORE JOB</div>
+                    <div className="kpi-value" style={{ color: '#d97706' }}>{seminarSeekingCount}</div>
+                    <div className="kpi-trend" style={{ color: '#d97706' }}>
+                      <Flame size={14} /> High Placement Readiness
+                    </div>
+                  </div>
+                  <div className="kpi-icon" style={{ background: '#fffbeb', color: '#d97706' }}>
+                    <Flame size={22} />
+                  </div>
+                </div>
+              </div>
+
+              <div className="kpi-card">
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                  <div>
+                    <div className="kpi-label">CURRENTLY WORKING</div>
+                    <div className="kpi-value" style={{ color: '#059669' }}>{seminarWorkingCount}</div>
+                    <div className="kpi-trend" style={{ color: '#059669' }}>
+                      <Briefcase size={14} /> Upskilling / Career Switch
+                    </div>
+                  </div>
+                  <div className="kpi-icon" style={{ background: '#ecfdf5', color: '#059669' }}>
+                    <Briefcase size={22} />
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Filter Bar for Seminar Registrations */}
+            <div className="glass-panel" style={{ padding: '16px 20px', marginBottom: '24px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '14px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flex: 1, minWidth: '280px', flexWrap: 'wrap' }}>
+                <div style={{ position: 'relative', width: '100%', maxWidth: '320px' }}>
+                  <Search size={17} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} />
+                  <input
+                    type="text"
+                    placeholder="Search attendee, college, company..."
+                    className="form-input"
+                    style={{ paddingLeft: '38px', height: '40px' }}
+                    value={seminarSearchQuery}
+                    onChange={(e) => setSeminarSearchQuery(e.target.value)}
+                  />
+                </div>
+
+                <select
+                  className="form-select"
+                  style={{ width: 'auto', minWidth: '150px', height: '40px' }}
+                  value={seminarCollegeFilter}
+                  onChange={(e) => setSeminarCollegeFilter(e.target.value)}
+                >
+                  <option value="all">All Institutions ({seminarCollegesList.length})</option>
+                  {seminarCollegesList.map((col) => (
+                    <option key={col} value={col}>{col}</option>
+                  ))}
+                </select>
+
+                <select
+                  className="form-select"
+                  style={{ width: 'auto', minWidth: '150px', height: '40px' }}
+                  value={seminarDeptFilter}
+                  onChange={(e) => setSeminarDeptFilter(e.target.value)}
+                >
+                  <option value="all">All Departments ({seminarDeptsList.length})</option>
+                  {seminarDeptsList.map((dept) => (
+                    <option key={dept} value={dept}>{dept}</option>
+                  ))}
+                </select>
+
+                <select
+                  className="form-select"
+                  style={{ width: 'auto', minWidth: '150px', height: '40px' }}
+                  value={seminarCareerFilter}
+                  onChange={(e) => setSeminarCareerFilter(e.target.value)}
+                >
+                  <option value="all">All Career Statuses</option>
+                  <option value="student">🎓 Students (1st - 4th Year)</option>
+                  <option value="seeking_job">💼 Seeking Core Job</option>
+                  <option value="working">🏢 Currently Working</option>
+                </select>
+
+                <select
+                  className="form-select"
+                  style={{ width: 'auto', minWidth: '130px', height: '40px' }}
+                  value={seminarStatusFilter}
+                  onChange={(e) => setSeminarStatusFilter(e.target.value)}
+                >
+                  <option value="all">All Workflow Statuses</option>
+                  <option value="new">New Lead</option>
+                  <option value="contacted">Contacted</option>
+                  <option value="counseled">Counseled</option>
+                  <option value="enrolled">Enrolled</option>
+                  <option value="lost">Lost</option>
+                </select>
+              </div>
+            </div>
+
+            {/* Seminar Leads Table */}
+            <div className="glass-panel" style={{ overflow: 'hidden' }}>
+              <table className="custom-table">
+                <thead>
+                  <tr>
+                    <th>Attendee &amp; Contact</th>
+                    <th>College &amp; Department</th>
+                    <th>Academic Year</th>
+                    <th>Career Status / Employment</th>
+                    <th>Status Workflow</th>
+                    <th>Registered</th>
+                    <th style={{ textAlign: 'right' }}>Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {filteredSeminarLeads.length === 0 ? (
+                    <tr>
+                      <td colSpan={7} style={{ textAlign: 'center', padding: '50px 0', color: 'var(--text-dim)' }}>
+                        <div style={{ marginBottom: '8px' }}>
+                          <Landmark size={36} style={{ color: '#cbd5e1', margin: '0 auto' }} />
+                        </div>
+                        <div style={{ fontWeight: 600, color: '#64748b', fontSize: '0.95rem' }}>No seminar registrations recorded yet</div>
+                        <div style={{ fontSize: '0.82rem', color: '#94a3b8', marginTop: '4px' }}>
+                          Display your seminar QR code or share <code style={{ background: '#f1f5f9', padding: '2px 6px', borderRadius: '4px' }}>https://a5automation.com/seminar/</code> during presentations to collect attendees!
+                        </div>
+                      </td>
+                    </tr>
+                  ) : (
+                    filteredSeminarLeads.map((sl) => {
+                      const cleanPhone = sl.phone.replace(/[^0-9]/g, '');
+                      const whatsappText = encodeURIComponent(
+                        `Hello ${sl.name}, thank you for attending the A5 Automation Seminar from ${sl.collegeName} (${sl.department})! We would love to share your participation confirmation and career guidance notes. How can we help you?`
+                      );
+
+                      const isPassedOut = sl.yearOfStudy === 'Passed Out';
+                      const isWorking = sl.employmentStatus === 'working';
+                      const isSeeking = sl.employmentStatus === 'seeking_job' || (isPassedOut && !isWorking);
+
+                      return (
+                        <tr key={sl.id}>
+                          <td>
+                            <div style={{ fontWeight: 700, color: 'var(--text-main)' }}>{sl.name}</div>
+                            <div style={{ fontSize: '0.78rem', color: 'var(--wa-green)', fontFamily: 'monospace', fontWeight: 600 }}>
+                              {sl.phone}
+                            </div>
+                            <div style={{ fontSize: '0.75rem', color: 'var(--text-dim)' }}>
+                              {sl.email}
+                            </div>
+                          </td>
+
+                          <td>
+                            <div style={{ fontWeight: 600, color: 'var(--text-main)', fontSize: '0.86rem' }}>
+                              {sl.collegeName}
+                            </div>
+                            <div style={{ fontSize: '0.76rem', color: 'var(--text-muted)' }}>
+                              {sl.department}
+                            </div>
+                            {sl.city && (
+                              <div style={{ fontSize: '0.72rem', color: 'var(--text-dim)' }}>
+                                📍 {sl.city}
+                              </div>
+                            )}
+                          </td>
+
+                          <td>
+                            <span className="badge badge-purple" style={{ fontSize: '0.74rem' }}>
+                              {sl.yearOfStudy}
+                            </span>
+                          </td>
+
+                          <td>
+                            {isWorking ? (
+                              <div>
+                                <span className="badge" style={{ background: '#f0f9ff', color: '#0369a1', fontWeight: 700, fontSize: '0.75rem' }}>
+                                  🏢 Working Professional
+                                </span>
+                                <div style={{ fontSize: '0.82rem', fontWeight: 700, color: '#1e293b', marginTop: '4px' }}>
+                                  {sl.companyName || 'Company Specified'}
+                                </div>
+                                {sl.designation && (
+                                  <div style={{ fontSize: '0.72rem', color: '#64748b' }}>
+                                    Role: {sl.designation}
+                                  </div>
+                                )}
+                              </div>
+                            ) : isSeeking ? (
+                              <div>
+                                <span className="badge" style={{ background: '#fffbeb', color: '#b45309', fontWeight: 700, fontSize: '0.75rem' }}>
+                                  💼 Seeking Core Job
+                                </span>
+                                <div style={{ fontSize: '0.74rem', color: '#92400e', marginTop: '3px' }}>
+                                  Passed Out Graduate
+                                </div>
+                              </div>
+                            ) : (
+                              <div>
+                                <span className="badge badge-green" style={{ fontSize: '0.75rem' }}>
+                                  🎓 Student Attendee
+                                </span>
+                              </div>
+                            )}
+                          </td>
+
+                          <td>
+                            <select
+                              value={sl.status}
+                              onChange={(e) => handleUpdateFormLeadStatus(sl.id, e.target.value as FormLead['status'])}
+                              className="form-select"
+                              style={{
+                                fontSize: '0.78rem',
+                                height: '32px',
+                                padding: '2px 8px',
+                                fontWeight: 700,
+                                background:
+                                  sl.status === 'enrolled'
+                                    ? '#ecfdf5'
+                                    : sl.status === 'counseled'
+                                    ? '#eff6ff'
+                                    : sl.status === 'contacted'
+                                    ? '#fffbeb'
+                                    : '#ffffff',
+                                color:
+                                  sl.status === 'enrolled'
+                                    ? '#059669'
+                                    : sl.status === 'counseled'
+                                    ? '#2563eb'
+                                    : sl.status === 'contacted'
+                                    ? '#d97706'
+                                    : '#0f172a'
+                              }}
+                            >
+                              <option value="new">New Lead</option>
+                              <option value="contacted">Contacted</option>
+                              <option value="counseled">Counseled</option>
+                              <option value="enrolled">Enrolled / Paid</option>
+                              <option value="lost">Not Interested</option>
+                            </select>
+                          </td>
+
+                          <td style={{ fontSize: '0.78rem', color: 'var(--text-dim)' }}>
+                            {new Date(sl.createdAt).toLocaleDateString()}
+                          </td>
+
+                          <td style={{ textAlign: 'right' }}>
+                            <div style={{ display: 'inline-flex', gap: '6px' }}>
+                              <a
+                                href={`https://wa.me/${cleanPhone}?text=${whatsappText}`}
+                                target="_blank"
+                                rel="noreferrer"
+                                className="btn btn-outline-wa btn-sm"
+                                title="Chat on WhatsApp"
+                              >
+                                <MessageSquare size={13} />
+                              </a>
+
+                              <a
+                                href={`tel:${cleanPhone}`}
+                                className="btn btn-secondary btn-sm"
+                                title="Call Attendee"
+                              >
+                                <Phone size={13} />
+                              </a>
+
+                              <a
+                                href={`mailto:${sl.email}?subject=A5%20Automation%20Seminar%20Participation`}
+                                className="btn btn-secondary btn-sm"
+                                title="Send Email"
+                              >
+                                <Mail size={13} />
+                              </a>
+
+                              <button
+                                onClick={() => handleDeleteFormLead(sl.id, sl.name)}
                                 className="btn btn-secondary btn-sm"
                                 style={{ color: '#ef4444' }}
                                 title="Delete Lead"

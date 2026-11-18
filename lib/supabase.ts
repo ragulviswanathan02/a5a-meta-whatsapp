@@ -395,22 +395,37 @@ export async function dbGetFormLeads(): Promise<FormLead[]> {
 
     if (error || !data) return [];
 
-    return data.map((row) => ({
-      id: row.id,
-      name: row.name,
-      email: row.email,
-      phone: row.phone,
-      collegeName: row.college_name,
-      department: row.department,
-      yearOfStudy: row.year_of_study,
-      courseInterest: row.course_interest || undefined,
-      city: row.city || undefined,
-      source: row.source || undefined,
-      status: row.status || 'new',
-      notes: row.notes || [],
-      createdAt: row.created_at,
-      updatedAt: row.updated_at,
-    }));
+    return data.map((row) => {
+      const firstNote = Array.isArray(row.notes) ? (row.notes[0] as any) : null;
+      const meta = firstNote?.metadata || {};
+
+      let empStatus = meta.employmentStatus;
+      if (!empStatus) {
+        if (row.course_interest?.toLowerCase().includes('seeking')) empStatus = 'seeking_job';
+        else if (row.course_interest?.toLowerCase().includes('working')) empStatus = 'working';
+        else if (row.year_of_study !== 'Passed Out') empStatus = 'student';
+      }
+
+      return {
+        id: row.id,
+        name: row.name,
+        email: row.email,
+        phone: row.phone,
+        collegeName: row.college_name,
+        department: row.department,
+        yearOfStudy: row.year_of_study,
+        courseInterest: row.course_interest || undefined,
+        city: row.city || undefined,
+        source: row.source || undefined,
+        employmentStatus: empStatus,
+        companyName: meta.companyName || undefined,
+        designation: meta.designation || undefined,
+        status: row.status || 'new',
+        notes: row.notes || [],
+        createdAt: row.created_at,
+        updatedAt: row.updated_at,
+      };
+    });
   } catch (err) {
     console.warn('[Supabase dbGetFormLeads Error]', err);
     return [];
@@ -419,6 +434,26 @@ export async function dbGetFormLeads(): Promise<FormLead[]> {
 
 export async function dbUpsertFormLead(lead: FormLead): Promise<boolean> {
   try {
+    const notesPayload: any[] = Array.isArray(lead.notes) ? [...lead.notes] : [];
+
+    // Ensure seminar metadata is embedded in first note if present
+    if (lead.employmentStatus || lead.companyName || lead.designation) {
+      const hasSeminarNote = notesPayload.some(n => n.metadata?.employmentStatus || n.metadata?.companyName);
+      if (!hasSeminarNote) {
+        notesPayload.unshift({
+          id: `sn-${Date.now()}`,
+          text: `Seminar Registration. Career: ${lead.employmentStatus || 'N/A'}${lead.companyName ? ` | Company: ${lead.companyName}` : ''}${lead.designation ? ` (${lead.designation})` : ''}`,
+          author: 'Seminar Registration System',
+          createdAt: new Date().toISOString(),
+          metadata: {
+            employmentStatus: lead.employmentStatus,
+            companyName: lead.companyName,
+            designation: lead.designation,
+          }
+        });
+      }
+    }
+
     const payload = {
       id: lead.id,
       name: lead.name,
@@ -431,7 +466,7 @@ export async function dbUpsertFormLead(lead: FormLead): Promise<boolean> {
       city: lead.city || null,
       source: lead.source || null,
       status: lead.status || 'new',
-      notes: lead.notes || [],
+      notes: notesPayload,
       updated_at: new Date().toISOString(),
     };
 
