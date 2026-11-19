@@ -72,17 +72,40 @@ export async function dbUpsertCredentials(creds: MetaCredentials): Promise<boole
   }
 }
 
+// Helper to fetch all rows across 1000-row PostgREST limits via pagination
+async function fetchAllRows<T = any>(
+  tableName: string,
+  orderBy: string = 'created_at',
+  ascending: boolean = false
+): Promise<T[]> {
+  let allRows: T[] = [];
+  let from = 0;
+  const batchSize = 1000;
+
+  while (true) {
+    const { data, error } = await supabase
+      .from(tableName)
+      .select('*')
+      .order(orderBy, { ascending })
+      .range(from, from + batchSize - 1);
+
+    if (error || !data || data.length === 0) break;
+    allRows = allRows.concat(data as T[]);
+    if (data.length < batchSize) break;
+    from += batchSize;
+  }
+
+  return allRows;
+}
+
 // ==========================================
 // LEADS
 // ==========================================
 export async function dbGetLeads(): Promise<Lead[]> {
   try {
-    const { data, error } = await supabase
-      .from('leads')
-      .select('*')
-      .order('created_at', { ascending: false });
+    const data = await fetchAllRows('leads', 'created_at', false);
 
-    if (error || !data) return [];
+    if (!data || data.length === 0) return [];
 
     return data.map((row) => ({
       id: row.id,
@@ -151,12 +174,9 @@ export async function dbDeleteLead(leadId: string): Promise<boolean> {
 // ==========================================
 export async function dbGetCampaigns(): Promise<Campaign[]> {
   try {
-    const { data, error } = await supabase
-      .from('campaigns')
-      .select('*')
-      .order('created_at', { ascending: false });
+    const data = await fetchAllRows('campaigns', 'created_at', false);
 
-    if (error || !data) return [];
+    if (!data || data.length === 0) return [];
 
     return data.map((row) => ({
       id: row.id,
@@ -330,12 +350,9 @@ export async function dbDeleteContactGroup(groupId: string): Promise<boolean> {
 // ==========================================
 export async function dbGetContacts(): Promise<Contact[]> {
   try {
-    const { data, error } = await supabase
-      .from('contacts')
-      .select('*')
-      .order('created_at', { ascending: false });
+    const data = await fetchAllRows('contacts', 'created_at', false);
 
-    if (error || !data) return [];
+    if (!data || data.length === 0) return [];
 
     return data.map((row) => ({
       id: row.id,
@@ -388,12 +405,9 @@ export async function dbDeleteContact(contactId: string): Promise<boolean> {
 // ==========================================
 export async function dbGetFormLeads(): Promise<FormLead[]> {
   try {
-    const { data, error } = await supabase
-      .from('form_leads')
-      .select('*')
-      .order('created_at', { ascending: false });
+    const data = await fetchAllRows('form_leads', 'created_at', false);
 
-    if (error || !data) return [];
+    if (!data || data.length === 0) return [];
 
     return data.map((row) => {
       const firstNote = Array.isArray(row.notes) ? (row.notes[0] as any) : null;
