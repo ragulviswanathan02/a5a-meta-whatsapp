@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import Navbar from '@/components/Navbar';
 import LoginGate from '@/components/LoginGate';
 import ChangePasswordModal from '@/components/ChangePasswordModal';
@@ -229,7 +229,9 @@ export default function DeveloperCampaignHQ() {
   const [newCampName, setNewCampName] = useState('');
   const [selectedTemplateId, setSelectedTemplateId] = useState('');
   const [audienceMode, setAudienceMode] = useState<'group' | 'custom'>('custom');
-  const [targetGroupId, setTargetGroupId] = useState('');
+  const [targetGroupId, setTargetGroupId] = useState('all');
+  const [selectedGroupIds, setSelectedGroupIds] = useState<string[]>([]);
+  const [groupSelectMode, setGroupSelectMode] = useState<'dropdown' | 'multiselect'>('dropdown');
   const [contactListInput, setContactListInput] = useState('');
   const [launchingCamp, setLaunchingCamp] = useState(false);
   const [campFeedback, setCampFeedback] = useState('');
@@ -361,7 +363,8 @@ export default function DeveloperCampaignHQ() {
         saveStoredContactGroups(cloudGroups);
         setSingleGroupId(cloudGroups[0].id);
         setBulkGroupId(cloudGroups[0].id);
-        setTargetGroupId(cloudGroups[0].id);
+        setTargetGroupId((prev) => prev || 'all');
+        setSelectedGroupIds((prev) => (prev.length > 0 ? prev : cloudGroups.map((g) => g.id)));
       }
       if (cloudContacts && cloudContacts.length > 0) {
         setContacts(cloudContacts);
@@ -391,7 +394,8 @@ export default function DeveloperCampaignHQ() {
     if (loadedGroups.length > 0) {
       setSingleGroupId(loadedGroups[0].id);
       setBulkGroupId(loadedGroups[0].id);
-      setTargetGroupId(loadedGroups[0].id);
+      setTargetGroupId((prev) => prev || 'all');
+      setSelectedGroupIds((prev) => (prev.length > 0 ? prev : loadedGroups.map((g) => g.id)));
     }
     setContacts(getStoredContacts());
 
@@ -849,6 +853,36 @@ export default function DeveloperCampaignHQ() {
     });
   }, [contacts, selectedGroupFilter, contactSearchQuery]);
 
+  // Unique contacts calculation for audience targeting
+  const totalUniqueContacts = useMemo(() => {
+    const seen = new Set<string>();
+    contacts.forEach((c) => {
+      const clean = c.phone.replace(/[^0-9]/g, '');
+      if (clean) seen.add(clean);
+    });
+    return seen.size;
+  }, [contacts]);
+
+  const targetedUniqueContacts = useMemo(() => {
+    if (audienceMode !== 'group') return 0;
+    let targetList: Contact[] = [];
+    if (groupSelectMode === 'multiselect') {
+      targetList = contacts.filter((c) => selectedGroupIds.includes(c.groupId));
+    } else {
+      if (targetGroupId === 'all') {
+        targetList = contacts;
+      } else {
+        targetList = contacts.filter((c) => c.groupId === targetGroupId);
+      }
+    }
+    const seen = new Set<string>();
+    targetList.forEach((c) => {
+      const clean = c.phone.replace(/[^0-9]/g, '');
+      if (clean) seen.add(clean);
+    });
+    return seen.size;
+  }, [audienceMode, groupSelectMode, selectedGroupIds, targetGroupId, contacts]);
+
   // Submit Template to Meta or Save
   const handleCreateTemplate = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -1084,9 +1118,35 @@ export default function DeveloperCampaignHQ() {
     let recipients: CampaignRecipient[] = [];
 
     if (audienceMode === 'group') {
-      const groupContacts = contacts.filter((c) => c.groupId === targetGroupId);
+      let candidateContacts: Contact[] = [];
+      if (groupSelectMode === 'multiselect') {
+        if (selectedGroupIds.length === 0) {
+          setCampFeedback('Please select at least one contact group.');
+          setLaunchingCamp(false);
+          return;
+        }
+        candidateContacts = contacts.filter((c) => selectedGroupIds.includes(c.groupId));
+      } else {
+        if (targetGroupId === 'all') {
+          candidateContacts = contacts;
+        } else {
+          candidateContacts = contacts.filter((c) => c.groupId === targetGroupId);
+        }
+      }
+
+      // Deduplicate contacts by clean phone number
+      const seenPhones = new Set<string>();
+      const groupContacts: Contact[] = [];
+      for (const c of candidateContacts) {
+        const clean = c.phone.replace(/[^0-9]/g, '');
+        if (clean && !seenPhones.has(clean)) {
+          seenPhones.add(clean);
+          groupContacts.push(c);
+        }
+      }
+
       if (groupContacts.length === 0) {
-        setCampFeedback('Selected contact group has 0 contacts. Please add contacts to the group first.');
+        setCampFeedback('Selected contact group(s) have 0 contacts. Please select groups with contacts.');
         setLaunchingCamp(false);
         return;
       }
@@ -1589,24 +1649,190 @@ export default function DeveloperCampaignHQ() {
                 </div>
 
                 {audienceMode === 'group' ? (
-                  <div className="form-group" style={{ padding: '16px', background: '#f8fafc', borderRadius: 'var(--radius-md)', border: '1px solid var(--border-subtle)' }}>
-                    <label className="form-label">Select Target Contact Group</label>
+                  <div className="form-group" style={{ padding: '18px 20px', background: '#f8fafc', borderRadius: 'var(--radius-md)', border: '1px solid var(--border-subtle)' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px', flexWrap: 'wrap', gap: '8px' }}>
+                      <label className="form-label" style={{ margin: 0, fontWeight: 700, fontSize: '0.92rem' }}>
+                        Select Target Contact Group(s)
+                      </label>
+
+                      {/* Mode Switcher: Dropdown vs Multi-Select Checkboxes */}
+                      <div style={{ display: 'inline-flex', background: '#e2e8f0', padding: '3px', borderRadius: '10px', gap: '4px' }}>
+                        <button
+                          type="button"
+                          onClick={() => setGroupSelectMode('dropdown')}
+                          style={{
+                            padding: '4px 12px',
+                            border: 'none',
+                            borderRadius: '8px',
+                            fontSize: '0.76rem',
+                            fontWeight: 700,
+                            cursor: 'pointer',
+                            background: groupSelectMode === 'dropdown' ? '#ffffff' : 'transparent',
+                            color: groupSelectMode === 'dropdown' ? 'var(--text-main)' : 'var(--text-muted)',
+                            boxShadow: groupSelectMode === 'dropdown' ? '0 1px 3px rgba(0,0,0,0.1)' : 'none',
+                            transition: 'all 0.15s ease'
+                          }}
+                        >
+                          Dropdown View
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setGroupSelectMode('multiselect')}
+                          style={{
+                            padding: '4px 12px',
+                            border: 'none',
+                            borderRadius: '8px',
+                            fontSize: '0.76rem',
+                            fontWeight: 700,
+                            cursor: 'pointer',
+                            background: groupSelectMode === 'multiselect' ? 'var(--wa-green-dark)' : 'transparent',
+                            color: groupSelectMode === 'multiselect' ? '#ffffff' : 'var(--text-muted)',
+                            boxShadow: groupSelectMode === 'multiselect' ? '0 1px 3px rgba(0,0,0,0.1)' : 'none',
+                            transition: 'all 0.15s ease'
+                          }}
+                        >
+                          ☑️ Multi-Select Checkboxes
+                        </button>
+                      </div>
+                    </div>
+
                     {groups.length === 0 ? (
                       <div style={{ fontSize: '0.84rem', color: 'var(--text-muted)' }}>
                         No contact groups created yet. Switch to the <strong>Contact Groups</strong> tab to create groups and import contacts!
                       </div>
-                    ) : (
-                      <select
-                        className="form-select"
-                        value={targetGroupId}
-                        onChange={(e) => setTargetGroupId(e.target.value)}
-                      >
-                        {groups.map((g) => (
-                          <option key={g.id} value={g.id}>
-                            {g.name} ({contacts.filter((c) => c.groupId === g.id).length} contacts)
+                    ) : groupSelectMode === 'dropdown' ? (
+                      <div>
+                        <select
+                          className="form-select"
+                          value={targetGroupId}
+                          onChange={(e) => setTargetGroupId(e.target.value)}
+                          style={{ fontWeight: 600, height: '44px' }}
+                        >
+                          <option value="all" style={{ fontWeight: 800, color: 'var(--wa-green-dark)' }}>
+                            🌟 All Contact Groups (Select All • {totalUniqueContacts} unique contacts)
                           </option>
-                        ))}
-                      </select>
+                          <optgroup label="Individual Contact Groups">
+                            {groups.map((g) => {
+                              const cnt = contacts.filter((c) => c.groupId === g.id).length;
+                              return (
+                                <option key={g.id} value={g.id}>
+                                  {g.name} ({cnt} contacts)
+                                </option>
+                              );
+                            })}
+                          </optgroup>
+                        </select>
+
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: '10px', fontSize: '0.8rem', color: 'var(--text-muted)', flexWrap: 'wrap', gap: '8px' }}>
+                          <span>
+                            Targeting: <strong style={{ color: 'var(--wa-green-dark)' }}>{targetedUniqueContacts} unique recipients</strong>
+                            {targetGroupId === 'all' ? ` across all ${groups.length} groups (duplicates auto-filtered)` : ''}
+                          </span>
+                          <button
+                            type="button"
+                            onClick={() => setGroupSelectMode('multiselect')}
+                            style={{ background: 'transparent', border: 'none', color: '#0284c7', cursor: 'pointer', fontWeight: 600, fontSize: '0.78rem' }}
+                          >
+                            + Select Multiple Specific Groups
+                          </button>
+                        </div>
+                      </div>
+                    ) : (
+                      <div>
+                        {/* Multi-Select Action Bar */}
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '10px', flexWrap: 'wrap', gap: '8px' }}>
+                          <div style={{ display: 'flex', gap: '8px' }}>
+                            <button
+                              type="button"
+                              onClick={() => setSelectedGroupIds(groups.map((g) => g.id))}
+                              className="btn btn-secondary btn-sm"
+                              style={{ fontSize: '0.76rem', padding: '4px 10px' }}
+                            >
+                              ✓ Select All ({groups.length} Groups)
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => setSelectedGroupIds([])}
+                              className="btn btn-secondary btn-sm"
+                              style={{ fontSize: '0.76rem', padding: '4px 10px' }}
+                            >
+                              Clear Selection
+                            </button>
+                          </div>
+                          <span style={{ fontSize: '0.8rem', fontWeight: 700, color: 'var(--wa-green-dark)' }}>
+                            {selectedGroupIds.length} of {groups.length} groups selected • {targetedUniqueContacts} unique recipients
+                          </span>
+                        </div>
+
+                        {/* Checkbox Cards Grid */}
+                        <div style={{
+                          display: 'grid',
+                          gridTemplateColumns: 'repeat(auto-fill, minmax(210px, 1fr))',
+                          gap: '10px',
+                          maxHeight: '220px',
+                          overflowY: 'auto',
+                          padding: '4px'
+                        }}>
+                          {groups.map((g) => {
+                            const isChecked = selectedGroupIds.includes(g.id);
+                            const cnt = contacts.filter((c) => c.groupId === g.id).length;
+                            return (
+                              <label
+                                key={g.id}
+                                style={{
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  justifyContent: 'space-between',
+                                  padding: '10px 12px',
+                                  borderRadius: '10px',
+                                  border: isChecked ? '1.5px solid var(--wa-green)' : '1px solid var(--border-subtle)',
+                                  background: isChecked ? '#f0fdf4' : '#ffffff',
+                                  cursor: 'pointer',
+                                  transition: 'all 0.15s ease',
+                                  userSelect: 'none'
+                                }}
+                              >
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', minWidth: 0 }}>
+                                  <input
+                                    type="checkbox"
+                                    checked={isChecked}
+                                    onChange={(e) => {
+                                      if (e.target.checked) {
+                                        setSelectedGroupIds([...selectedGroupIds, g.id]);
+                                      } else {
+                                        setSelectedGroupIds(selectedGroupIds.filter((id) => id !== g.id));
+                                      }
+                                    }}
+                                    style={{ width: '16px', height: '16px', accentColor: 'var(--wa-green)' }}
+                                  />
+                                  <span style={{
+                                    fontSize: '0.84rem',
+                                    fontWeight: isChecked ? 700 : 500,
+                                    color: isChecked ? 'var(--wa-green-dark)' : 'var(--text-main)',
+                                    whiteSpace: 'nowrap',
+                                    overflow: 'hidden',
+                                    textOverflow: 'ellipsis'
+                                  }}>
+                                    {g.name}
+                                  </span>
+                                </div>
+                                <span style={{
+                                  fontSize: '0.72rem',
+                                  fontWeight: 800,
+                                  padding: '2px 7px',
+                                  borderRadius: '999px',
+                                  background: isChecked ? '#dcfce7' : '#f1f5f9',
+                                  color: isChecked ? '#15803d' : '#64748b',
+                                  marginLeft: '6px',
+                                  flexShrink: 0
+                                }}>
+                                  {cnt}
+                                </span>
+                              </label>
+                            );
+                          })}
+                        </div>
+                      </div>
                     )}
                   </div>
                 ) : (
