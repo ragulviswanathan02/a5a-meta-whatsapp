@@ -102,7 +102,7 @@ export default function DeveloperCampaignHQ() {
   useInactivityTracker('developer', () => {
     setIsAuthenticated(false);
   });
-  const [activeTab, setActiveTab] = useState<'campaigns' | 'contacts' | 'templates' | 'resend' | 'credentials'>('campaigns');
+  const [activeTab, setActiveTab] = useState<'campaigns' | 'history' | 'contacts' | 'templates' | 'resend' | 'credentials'>('campaigns');
   const [isChangePassOpen, setIsChangePassOpen] = useState(false);
 
   // Data states
@@ -1314,12 +1314,13 @@ export default function DeveloperCampaignHQ() {
     if (failedCount > 0) {
       setCampFeedback(`⚠️ Campaign dispatched with ${failedCount} errors. ${sentCount} messages accepted by Meta.`);
     } else {
-      setCampFeedback(`🚀 Campaign launched! ${sentCount} messages accepted by Meta Cloud queue. Delivery receipts and recipient button clicks will sync in real-time below.`);
+      setCampFeedback(`🚀 Campaign "${newCampaign.name}" launched! ${sentCount} messages dispatched. Tracking delivery and leads in real-time below.`);
     }
 
     setLaunchingCamp(false);
     setNewCampName('');
-    setTimeout(() => setCampFeedback(''), 5500);
+    setActiveTab('history');
+    setTimeout(() => setCampFeedback(''), 7000);
   };
 
   // Delete Campaign
@@ -1529,6 +1530,13 @@ export default function DeveloperCampaignHQ() {
               <span>Broadcast Engine</span>
             </button>
             <button
+              onClick={() => setActiveTab('history')}
+              className={`tab-btn ${activeTab === 'history' ? 'active' : ''}`}
+            >
+              <Clock size={16} />
+              <span>Broadcast History ({campaigns.length})</span>
+            </button>
+            <button
               onClick={() => setActiveTab('contacts')}
               className={`tab-btn ${activeTab === 'contacts' ? 'active' : ''}`}
             >
@@ -1563,9 +1571,20 @@ export default function DeveloperCampaignHQ() {
         {activeTab === 'campaigns' && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '28px' }}>
             {campFeedback && (
-              <div style={{ padding: '14px 18px', background: 'var(--wa-light)', border: '1px solid rgba(16, 185, 129, 0.3)', borderRadius: 'var(--radius-md)', color: 'var(--wa-green-dark)', fontSize: '0.9rem', display: 'flex', alignItems: 'center', gap: '10px' }}>
-                <CheckCircle2 size={18} />
-                <span>{campFeedback}</span>
+              <div style={{ padding: '14px 18px', background: 'var(--wa-light)', border: '1px solid rgba(16, 185, 129, 0.3)', borderRadius: 'var(--radius-md)', color: 'var(--wa-green-dark)', fontSize: '0.9rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '10px', flexWrap: 'wrap' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                  <CheckCircle2 size={18} />
+                  <span>{campFeedback}</span>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setActiveTab('history')}
+                  className="btn btn-sm btn-primary"
+                  style={{ fontSize: '0.78rem', padding: '6px 12px', display: 'inline-flex', alignItems: 'center', gap: '6px' }}
+                >
+                  <Clock size={14} />
+                  <span>View in Broadcast History &rarr;</span>
+                </button>
               </div>
             )}
 
@@ -2023,10 +2042,33 @@ export default function DeveloperCampaignHQ() {
                 )}
               </form>
             </div>
+          </div>
+        )}
+
+        {/* TAB 2: CAMPAIGN BROADCAST HISTORY & ANALYTICS */}
+        {activeTab === 'history' && (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '28px' }}>
+            {campFeedback && (
+              <div style={{ padding: '14px 18px', background: 'var(--wa-light)', border: '1px solid rgba(16, 185, 129, 0.3)', borderRadius: 'var(--radius-md)', color: 'var(--wa-green-dark)', fontSize: '0.9rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '10px', flexWrap: 'wrap' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                  <CheckCircle2 size={18} />
+                  <span>{campFeedback}</span>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setActiveTab('campaigns')}
+                  className="btn btn-sm btn-primary"
+                  style={{ fontSize: '0.78rem', padding: '6px 12px', display: 'inline-flex', alignItems: 'center', gap: '6px' }}
+                >
+                  <Send size={14} />
+                  <span>Launch Another Broadcast &rarr;</span>
+                </button>
+              </div>
+            )}
 
             {/* Campaign-Wide Analytics & Performance Table */}
             <div className="glass-panel" style={{ overflow: 'hidden' }}>
-              <div style={{ padding: '20px 24px', borderBottom: '1px solid var(--border-subtle)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              <div style={{ padding: '20px 24px', borderBottom: '1px solid var(--border-subtle)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '12px' }}>
                 <div>
                   <h3 style={{ fontSize: '1.15rem', fontWeight: '800', color: 'var(--text-main)' }}>
                     Campaign Broadcast History & Analytics
@@ -2035,9 +2077,20 @@ export default function DeveloperCampaignHQ() {
                     Track delivery rates, open receipts, and inbound leads generated per broadcast
                   </p>
                 </div>
-                <span className="badge badge-blue">
-                  {campaigns.length} Campaigns Tracked
-                </span>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                  <button
+                    type="button"
+                    onClick={() => setActiveTab('campaigns')}
+                    className="btn btn-primary btn-sm"
+                    style={{ fontSize: '0.78rem', display: 'inline-flex', alignItems: 'center', gap: '6px' }}
+                  >
+                    <Send size={14} />
+                    <span>Launch New Campaign</span>
+                  </button>
+                  <span className="badge badge-blue">
+                    {campaigns.length} Campaigns Tracked
+                  </span>
+                </div>
               </div>
 
               <table className="custom-table">
