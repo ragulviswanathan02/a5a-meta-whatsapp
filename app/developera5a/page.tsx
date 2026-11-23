@@ -2142,37 +2142,47 @@ export default function DeveloperCampaignHQ() {
                             </button>
                           </td>
                           <td>
-                            {deliveredCount > 0 ? (
-                              <button
-                                type="button"
-                                onClick={() => {
-                                  setBreakdownCampaign(camp);
-                                  setBreakdownFilter('delivered');
-                                }}
-                                className="badge badge-green"
-                                style={{ cursor: 'pointer', border: 'none' }}
-                                title="Click to view delivered recipients"
-                              >
-                                ✓ {deliveredCount} Delivered
-                              </button>
-                            ) : queuedCount > 0 ? (
-                              <button
-                                type="button"
-                                onClick={() => {
-                                  setBreakdownCampaign(camp);
-                                  setBreakdownFilter('sent');
-                                }}
-                                className="badge"
-                                style={{ background: '#e0f2fe', color: '#0369a1', border: '1px solid #bae6fd', fontWeight: 600, cursor: 'pointer' }}
-                                title="Click to view queued messages in Meta"
-                              >
-                                ⏳ {queuedCount} Queued in Meta
-                              </button>
-                            ) : (
-                              <span className="badge badge-secondary" style={{ opacity: 0.7 }}>
-                                0 Delivered
-                              </span>
-                            )}
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', alignItems: 'flex-start' }}>
+                              {deliveredCount > 0 ? (
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    setBreakdownCampaign(camp);
+                                    setBreakdownFilter('delivered');
+                                  }}
+                                  className="badge badge-green"
+                                  style={{ cursor: 'pointer', border: 'none', display: 'inline-flex', alignItems: 'center', gap: '4px' }}
+                                  title="Click to view delivered recipients"
+                                >
+                                  <span>✓ {deliveredCount} Delivered</span>
+                                  {totalCount > 0 && (
+                                    <span style={{ fontSize: '0.7rem', opacity: 0.85 }}>({Math.round((deliveredCount / totalCount) * 100)}%)</span>
+                                  )}
+                                </button>
+                              ) : (
+                                <span className="badge badge-secondary" style={{ opacity: 0.7 }}>
+                                  0 Delivered
+                                </span>
+                              )}
+
+                              {queuedCount > 0 && (
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    setBreakdownCampaign(camp);
+                                    setBreakdownFilter('sent');
+                                  }}
+                                  className="badge"
+                                  style={{ background: '#e0f2fe', color: '#0369a1', border: '1px solid #bae6fd', fontWeight: 600, cursor: 'pointer', fontSize: '0.72rem', display: 'inline-flex', alignItems: 'center', gap: '4px' }}
+                                  title="Dispatched to Meta Cloud API; waiting for recipient device to connect to internet and acknowledge receipt"
+                                >
+                                  <span>⏳ {queuedCount} Queued in Meta</span>
+                                  {totalCount > 0 && (
+                                    <span style={{ fontSize: '0.68rem', opacity: 0.85 }}>({Math.round((queuedCount / totalCount) * 100)}%)</span>
+                                  )}
+                                </button>
+                              )}
+                            </div>
                           </td>
                           <td>
                             <span className="badge badge-purple" style={{ fontWeight: 700 }}>
@@ -3738,191 +3748,324 @@ export default function DeveloperCampaignHQ() {
             background: '#ffffff',
             borderRadius: '16px',
             width: '100%',
-            maxWidth: '960px',
+            maxWidth: '1060px',
             maxHeight: '90vh',
             display: 'flex',
             flexDirection: 'column',
             boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)',
             overflow: 'hidden',
           }}>
-            {/* Modal Header */}
-            <div style={{
-              padding: '20px 24px',
-              borderBottom: '1px solid var(--border-subtle)',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-              background: '#f8fafc',
-            }}>
-              <div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                  <h3 style={{ fontSize: '1.2rem', fontWeight: 800, color: 'var(--text-main)', margin: 0 }}>
-                    {breakdownCampaign.name}
-                  </h3>
-                  <span className="badge badge-secondary" style={{ fontSize: '0.75rem' }}>
-                    Template: <code>{breakdownCampaign.templateName}</code>
-                  </span>
-                </div>
-                <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', margin: '4px 0 0 0' }}>
-                  Recipient-level delivery receipts, read statuses, and real-time Meta API diagnostic logs
-                </p>
-              </div>
-              <button
-                type="button"
-                onClick={() => setBreakdownCampaign(null)}
-                style={{
-                  background: '#f1f5f9',
-                  border: 'none',
-                  borderRadius: '8px',
-                  width: '32px',
-                  height: '32px',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  cursor: 'pointer',
-                  color: '#64748b',
-                }}
-              >
-                <X size={18} />
-              </button>
-            </div>
+            {(() => {
+              const totalRecipients = breakdownCampaign.recipients?.length || breakdownCampaign.totalCount || 0;
+              const deliveredRecipients = breakdownCampaign.recipients ? breakdownCampaign.recipients.filter(r => r.status === 'delivered' || r.status === 'read' || r.status === 'replied').length : (breakdownCampaign.deliveredCount || 0);
+              const readRecipients = breakdownCampaign.recipients ? breakdownCampaign.recipients.filter(r => r.status === 'read' || r.status === 'replied').length : (breakdownCampaign.readCount || 0);
+              const repliedRecipients = breakdownCampaign.recipients ? breakdownCampaign.recipients.filter(r => r.status === 'replied').length : (breakdownCampaign.leadsCount || 0);
+              const failedRecipients = breakdownCampaign.recipients ? breakdownCampaign.recipients.filter(r => r.status === 'failed').length : (breakdownCampaign.failedCount || 0);
+              const queuedRecipients = breakdownCampaign.recipients ? breakdownCampaign.recipients.filter(r => r.status === 'sent').length : Math.max(0, totalRecipients - deliveredRecipients - failedRecipients);
 
-            {/* Campaign Summary & Filter Tabs Bar */}
-            <div style={{
-              padding: '14px 24px',
-              borderBottom: '1px solid var(--border-subtle)',
-              display: 'flex',
-              flexWrap: 'wrap',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-              gap: '12px',
-              background: '#ffffff',
-            }}>
-              {/* Filter Pills */}
-              <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
-                <button
-                  type="button"
-                  onClick={() => setBreakdownFilter('all')}
-                  style={{
-                    padding: '6px 14px',
-                    borderRadius: '20px',
-                    fontSize: '0.8rem',
-                    fontWeight: 600,
-                    cursor: 'pointer',
-                    border: '1px solid',
-                    borderColor: breakdownFilter === 'all' ? 'var(--wa-green-dark)' : '#e2e8f0',
-                    background: breakdownFilter === 'all' ? 'var(--wa-light)' : '#ffffff',
-                    color: breakdownFilter === 'all' ? 'var(--wa-green-dark)' : 'var(--text-muted)',
-                  }}
-                >
-                  All ({breakdownCampaign.recipients?.length || breakdownCampaign.totalCount})
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setBreakdownFilter('replied')}
-                  style={{
-                    padding: '6px 14px',
-                    borderRadius: '20px',
-                    fontSize: '0.8rem',
-                    fontWeight: 600,
-                    cursor: 'pointer',
-                    border: '1px solid',
-                    borderColor: breakdownFilter === 'replied' ? '#8b5cf6' : '#e2e8f0',
-                    background: breakdownFilter === 'replied' ? '#f5f3ff' : '#ffffff',
-                    color: breakdownFilter === 'replied' ? '#7c3aed' : 'var(--text-muted)',
-                  }}
-                >
-                  🎯 Replied / Leads ({breakdownCampaign.recipients ? breakdownCampaign.recipients.filter(r => r.status === 'replied').length : (breakdownCampaign.leadsCount || 0)})
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setBreakdownFilter('read')}
-                  style={{
-                    padding: '6px 14px',
-                    borderRadius: '20px',
-                    fontSize: '0.8rem',
-                    fontWeight: 600,
-                    cursor: 'pointer',
-                    border: '1px solid',
-                    borderColor: breakdownFilter === 'read' ? '#3b82f6' : '#e2e8f0',
-                    background: breakdownFilter === 'read' ? '#eff6ff' : '#ffffff',
-                    color: breakdownFilter === 'read' ? '#1d4ed8' : 'var(--text-muted)',
-                  }}
-                >
-                  👁️ Read ({breakdownCampaign.recipients ? breakdownCampaign.recipients.filter(r => r.status === 'read' || r.status === 'replied').length : (breakdownCampaign.readCount || 0)})
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setBreakdownFilter('delivered')}
-                  style={{
-                    padding: '6px 14px',
-                    borderRadius: '20px',
-                    fontSize: '0.8rem',
-                    fontWeight: 600,
-                    cursor: 'pointer',
-                    border: '1px solid',
-                    borderColor: breakdownFilter === 'delivered' ? '#10b981' : '#e2e8f0',
-                    background: breakdownFilter === 'delivered' ? '#ecfdf5' : '#ffffff',
-                    color: breakdownFilter === 'delivered' ? '#047857' : 'var(--text-muted)',
-                  }}
-                >
-                  ✓ Delivered ({breakdownCampaign.recipients ? breakdownCampaign.recipients.filter(r => r.status === 'delivered' || r.status === 'read' || r.status === 'replied').length : (breakdownCampaign.deliveredCount || 0)})
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setBreakdownFilter('sent')}
-                  style={{
-                    padding: '6px 14px',
-                    borderRadius: '20px',
-                    fontSize: '0.8rem',
-                    fontWeight: 600,
-                    cursor: 'pointer',
-                    border: '1px solid',
-                    borderColor: breakdownFilter === 'sent' ? '#0284c7' : '#e2e8f0',
-                    background: breakdownFilter === 'sent' ? '#f0f9ff' : '#ffffff',
-                    color: breakdownFilter === 'sent' ? '#0369a1' : 'var(--text-muted)',
-                  }}
-                >
-                  ⏳ Queued in Meta ({breakdownCampaign.recipients ? breakdownCampaign.recipients.filter(r => r.status === 'sent').length : 0})
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setBreakdownFilter('failed')}
-                  style={{
-                    padding: '6px 14px',
-                    borderRadius: '20px',
-                    fontSize: '0.8rem',
-                    fontWeight: 600,
-                    cursor: 'pointer',
-                    border: '1px solid',
-                    borderColor: breakdownFilter === 'failed' ? '#ef4444' : '#e2e8f0',
-                    background: breakdownFilter === 'failed' ? '#fef2f2' : '#ffffff',
-                    color: breakdownFilter === 'failed' ? '#b91c1c' : 'var(--text-muted)',
-                  }}
-                >
-                  ✕ Failed ({breakdownCampaign.recipients ? breakdownCampaign.recipients.filter(r => r.status === 'failed').length : (breakdownCampaign.failedCount || 0)})
-                </button>
-              </div>
+              const deliveredPercent = totalRecipients > 0 ? Math.round((deliveredRecipients / totalRecipients) * 100) : 0;
+              const queuedPercent = totalRecipients > 0 ? Math.round((queuedRecipients / totalRecipients) * 100) : 0;
+              const readPercent = totalRecipients > 0 ? Math.round((readRecipients / totalRecipients) * 100) : 0;
 
-              {/* Search Box */}
-              <div style={{ position: 'relative', width: '220px' }}>
-                <Search size={14} style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-dim)' }} />
-                <input
-                  type="text"
-                  placeholder="Search name or phone..."
-                  value={breakdownSearch}
-                  onChange={(e) => setBreakdownSearch(e.target.value)}
-                  style={{
-                    width: '100%',
-                    padding: '6px 10px 6px 30px',
+              return (
+                <>
+                  {/* Modal Header */}
+                  <div style={{
+                    padding: '20px 24px',
+                    borderBottom: '1px solid var(--border-subtle)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    background: '#f8fafc',
+                  }}>
+                    <div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                        <h3 style={{ fontSize: '1.25rem', fontWeight: 800, color: 'var(--text-main)', margin: 0 }}>
+                          {breakdownCampaign.name}
+                        </h3>
+                        <span className="badge badge-secondary" style={{ fontSize: '0.75rem' }}>
+                          Template: <code>{breakdownCampaign.templateName}</code>
+                        </span>
+                      </div>
+                      <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', margin: '4px 0 0 0' }}>
+                        Real-time Meta Cloud API delivery lifecycle, device acknowledgements, and diagnostic logs
+                      </p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setBreakdownCampaign(null)}
+                      style={{
+                        background: '#f1f5f9',
+                        border: 'none',
+                        borderRadius: '8px',
+                        width: '32px',
+                        height: '32px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        cursor: 'pointer',
+                        color: '#64748b',
+                      }}
+                    >
+                      <X size={18} />
+                    </button>
+                  </div>
+
+                  {/* Delivery Funnel & Analytics Pipeline */}
+                  <div style={{
+                    padding: '16px 24px',
+                    background: '#f8fafc',
+                    borderBottom: '1px solid #e2e8f0',
+                    display: 'grid',
+                    gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))',
+                    gap: '12px',
+                  }}>
+                    {/* 1. Targeted */}
+                    <div style={{ background: '#ffffff', borderRadius: '10px', padding: '12px 14px', border: '1px solid #e2e8f0', boxShadow: '0 1px 3px rgba(0,0,0,0.03)' }}>
+                      <div style={{ fontSize: '0.72rem', color: '#64748b', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                        1. Targeted
+                      </div>
+                      <div style={{ fontSize: '1.35rem', fontWeight: 800, color: '#0f172a', marginTop: '2px' }}>
+                        {totalRecipients}
+                      </div>
+                      <div style={{ fontSize: '0.7rem', color: '#059669', marginTop: '2px', fontWeight: 600 }}>
+                        100% Dispatched to Meta
+                      </div>
+                    </div>
+
+                    {/* 2. Queued in Meta */}
+                    <div style={{ background: '#f0f9ff', borderRadius: '10px', padding: '12px 14px', border: '1px solid #bae6fd', boxShadow: '0 1px 3px rgba(0,0,0,0.03)' }}>
+                      <div style={{ fontSize: '0.72rem', color: '#0369a1', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                        2. Queued in Meta
+                      </div>
+                      <div style={{ fontSize: '1.35rem', fontWeight: 800, color: '#0284c7', marginTop: '2px' }}>
+                        {queuedRecipients}
+                      </div>
+                      <div style={{ fontSize: '0.7rem', color: '#0369a1', marginTop: '2px', fontWeight: 600 }}>
+                        {queuedPercent}% • Awaiting Device
+                      </div>
+                    </div>
+
+                    {/* 3. Delivered */}
+                    <div style={{ background: '#ecfdf5', borderRadius: '10px', padding: '12px 14px', border: '1px solid #a7f3d0', boxShadow: '0 1px 3px rgba(0,0,0,0.03)' }}>
+                      <div style={{ fontSize: '0.72rem', color: '#047857', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                        3. Delivered to Phone
+                      </div>
+                      <div style={{ fontSize: '1.35rem', fontWeight: 800, color: '#059669', marginTop: '2px' }}>
+                        {deliveredRecipients}
+                      </div>
+                      <div style={{ fontSize: '0.7rem', color: '#047857', marginTop: '2px', fontWeight: 600 }}>
+                        {deliveredPercent}% • Two grey ticks ✓✓
+                      </div>
+                    </div>
+
+                    {/* 4. Read */}
+                    <div style={{ background: '#eff6ff', borderRadius: '10px', padding: '12px 14px', border: '1px solid #bfdbfe', boxShadow: '0 1px 3px rgba(0,0,0,0.03)' }}>
+                      <div style={{ fontSize: '0.72rem', color: '#1d4ed8', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                        4. Opened & Read
+                      </div>
+                      <div style={{ fontSize: '1.35rem', fontWeight: 800, color: '#2563eb', marginTop: '2px' }}>
+                        {readRecipients}
+                      </div>
+                      <div style={{ fontSize: '0.7rem', color: '#1d4ed8', marginTop: '2px', fontWeight: 600 }}>
+                        {readPercent}% • Two blue ticks ✓✓
+                      </div>
+                    </div>
+
+                    {/* 5. Inbound Leads */}
+                    <div style={{ background: '#f5f3ff', borderRadius: '10px', padding: '12px 14px', border: '1px solid #ddd6fe', boxShadow: '0 1px 3px rgba(0,0,0,0.03)' }}>
+                      <div style={{ fontSize: '0.72rem', color: '#6d28d9', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                        5. Inbound Leads
+                      </div>
+                      <div style={{ fontSize: '1.35rem', fontWeight: 800, color: '#7c3aed', marginTop: '2px' }}>
+                        {repliedRecipients}
+                      </div>
+                      <div style={{ fontSize: '0.7rem', color: '#6d28d9', marginTop: '2px', fontWeight: 600 }}>
+                        {totalRecipients > 0 ? ((repliedRecipients / totalRecipients) * 100).toFixed(1) : 0}% • Button / Reply
+                      </div>
+                    </div>
+
+                    {/* 6. Failed */}
+                    <div style={{ background: failedRecipients > 0 ? '#fef2f2' : '#ffffff', borderRadius: '10px', padding: '12px 14px', border: `1px solid ${failedRecipients > 0 ? '#fecaca' : '#e2e8f0'}`, boxShadow: '0 1px 3px rgba(0,0,0,0.03)' }}>
+                      <div style={{ fontSize: '0.72rem', color: failedRecipients > 0 ? '#b91c1c' : '#64748b', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                        Failed / Bounced
+                      </div>
+                      <div style={{ fontSize: '1.35rem', fontWeight: 800, color: failedRecipients > 0 ? '#dc2626' : '#64748b', marginTop: '2px' }}>
+                        {failedRecipients}
+                      </div>
+                      <div style={{ fontSize: '0.7rem', color: failedRecipients > 0 ? '#b91c1c' : '#64748b', marginTop: '2px', fontWeight: 600 }}>
+                        {failedRecipients > 0 ? `${Math.round((failedRecipients / totalRecipients) * 100)}% delivery errors` : '0 Errors'}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Informative Lifecycle Explanation Alert Banner */}
+                  <div style={{
+                    margin: '12px 24px 0 24px',
+                    padding: '12px 16px',
+                    background: '#f0f9ff',
+                    border: '1px solid #bae6fd',
+                    borderRadius: '8px',
                     fontSize: '0.78rem',
-                    borderRadius: '6px',
-                    border: '1px solid #cbd5e1',
-                    outline: 'none',
-                  }}
-                />
-              </div>
-            </div>
+                    color: '#0369a1',
+                    display: 'flex',
+                    alignItems: 'flex-start',
+                    gap: '12px',
+                    lineHeight: 1.5,
+                  }}>
+                    <Info size={18} style={{ color: '#0284c7', flexShrink: 0, marginTop: '2px' }} />
+                    <div>
+                      <div style={{ fontWeight: 700, color: '#0c4a6e', fontSize: '0.82rem' }}>
+                        Why is there a difference between Targeted ({totalRecipients}) and Delivered ({deliveredRecipients})?
+                      </div>
+                      <div style={{ color: '#334155', marginTop: '3px' }}>
+                        • <strong>All {totalRecipients} messages were successfully sent & accepted by Meta Cloud API</strong> (wamid IDs assigned).<br />
+                        • <strong>{deliveredRecipients} messages</strong> have physically reached recipient devices ({readRecipients} have already opened/read them).<br />
+                        • <strong>{queuedRecipients} messages are currently &quot;Queued in Meta&quot;</strong>: They are <strong>NOT stuck</strong> in our system. Meta is actively attempting to deliver them and is waiting for the recipient&apos;s phone to turn on, connect to mobile data/Wi-Fi, or open WhatsApp. Meta holds queued messages for up to 30 days and delivers them the instant the device comes online.
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Campaign Filter Tabs Bar & Search */}
+                  <div style={{
+                    padding: '14px 24px',
+                    borderBottom: '1px solid var(--border-subtle)',
+                    display: 'flex',
+                    flexWrap: 'wrap',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    gap: '12px',
+                    background: '#ffffff',
+                  }}>
+                    {/* Filter Pills */}
+                    <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                      <button
+                        type="button"
+                        onClick={() => setBreakdownFilter('all')}
+                        style={{
+                          padding: '6px 14px',
+                          borderRadius: '20px',
+                          fontSize: '0.8rem',
+                          fontWeight: 600,
+                          cursor: 'pointer',
+                          border: '1px solid',
+                          borderColor: breakdownFilter === 'all' ? 'var(--wa-green-dark)' : '#e2e8f0',
+                          background: breakdownFilter === 'all' ? 'var(--wa-light)' : '#ffffff',
+                          color: breakdownFilter === 'all' ? 'var(--wa-green-dark)' : 'var(--text-muted)',
+                        }}
+                      >
+                        All ({totalRecipients})
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setBreakdownFilter('replied')}
+                        style={{
+                          padding: '6px 14px',
+                          borderRadius: '20px',
+                          fontSize: '0.8rem',
+                          fontWeight: 600,
+                          cursor: 'pointer',
+                          border: '1px solid',
+                          borderColor: breakdownFilter === 'replied' ? '#8b5cf6' : '#e2e8f0',
+                          background: breakdownFilter === 'replied' ? '#f5f3ff' : '#ffffff',
+                          color: breakdownFilter === 'replied' ? '#7c3aed' : 'var(--text-muted)',
+                        }}
+                      >
+                        🎯 Replied / Leads ({repliedRecipients})
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setBreakdownFilter('read')}
+                        style={{
+                          padding: '6px 14px',
+                          borderRadius: '20px',
+                          fontSize: '0.8rem',
+                          fontWeight: 600,
+                          cursor: 'pointer',
+                          border: '1px solid',
+                          borderColor: breakdownFilter === 'read' ? '#3b82f6' : '#e2e8f0',
+                          background: breakdownFilter === 'read' ? '#eff6ff' : '#ffffff',
+                          color: breakdownFilter === 'read' ? '#1d4ed8' : 'var(--text-muted)',
+                        }}
+                      >
+                        👁️ Read ({readRecipients})
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setBreakdownFilter('delivered')}
+                        style={{
+                          padding: '6px 14px',
+                          borderRadius: '20px',
+                          fontSize: '0.8rem',
+                          fontWeight: 600,
+                          cursor: 'pointer',
+                          border: '1px solid',
+                          borderColor: breakdownFilter === 'delivered' ? '#10b981' : '#e2e8f0',
+                          background: breakdownFilter === 'delivered' ? '#ecfdf5' : '#ffffff',
+                          color: breakdownFilter === 'delivered' ? '#047857' : 'var(--text-muted)',
+                        }}
+                      >
+                        ✓ Delivered ({deliveredRecipients})
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setBreakdownFilter('sent')}
+                        style={{
+                          padding: '6px 14px',
+                          borderRadius: '20px',
+                          fontSize: '0.8rem',
+                          fontWeight: 600,
+                          cursor: 'pointer',
+                          border: '1px solid',
+                          borderColor: breakdownFilter === 'sent' ? '#0284c7' : '#e2e8f0',
+                          background: breakdownFilter === 'sent' ? '#f0f9ff' : '#ffffff',
+                          color: breakdownFilter === 'sent' ? '#0369a1' : 'var(--text-muted)',
+                        }}
+                        title="Messages dispatched to Meta Cloud API and awaiting device internet connection"
+                      >
+                        ⏳ Queued in Meta ({queuedRecipients})
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setBreakdownFilter('failed')}
+                        style={{
+                          padding: '6px 14px',
+                          borderRadius: '20px',
+                          fontSize: '0.8rem',
+                          fontWeight: 600,
+                          cursor: 'pointer',
+                          border: '1px solid',
+                          borderColor: breakdownFilter === 'failed' ? '#ef4444' : '#e2e8f0',
+                          background: breakdownFilter === 'failed' ? '#fef2f2' : '#ffffff',
+                          color: breakdownFilter === 'failed' ? '#b91c1c' : 'var(--text-muted)',
+                        }}
+                      >
+                        ✕ Failed ({failedRecipients})
+                      </button>
+                    </div>
+
+                    {/* Search Box */}
+                    <div style={{ position: 'relative', width: '220px' }}>
+                      <Search size={14} style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-dim)' }} />
+                      <input
+                        type="text"
+                        placeholder="Search name or phone..."
+                        value={breakdownSearch}
+                        onChange={(e) => setBreakdownSearch(e.target.value)}
+                        style={{
+                          width: '100%',
+                          padding: '6px 10px 6px 30px',
+                          fontSize: '0.78rem',
+                          borderRadius: '6px',
+                          border: '1px solid #cbd5e1',
+                          outline: 'none',
+                        }}
+                      />
+                    </div>
+                  </div>
+                </>
+              );
+            })()}
 
             {/* Recipients Scrollable Table */}
             <div style={{ overflowY: 'auto', flex: 1, padding: '0 24px' }}>
@@ -4034,7 +4177,7 @@ export default function DeveloperCampaignHQ() {
                             ) : (
                               <span style={{ color: '#0284c7', display: 'flex', alignItems: 'center', gap: '4px' }}>
                                 <Clock size={13} />
-                                Accepted by Meta Cloud API; waiting for device to acknowledge
+                                Accepted by Meta Cloud API (wamid assigned) • Waiting for phone to connect to internet
                               </span>
                             )}
                           </td>
