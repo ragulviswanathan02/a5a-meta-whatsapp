@@ -2099,6 +2099,7 @@ export default function DeveloperCampaignHQ() {
                     <th>Campaign Name & Template</th>
                     <th>Targeted</th>
                     <th>Delivered</th>
+                    <th>Queued in Meta</th>
                     <th>Leads Generated</th>
                     <th>Failed</th>
                     <th style={{ textAlign: 'right' }}>Actions</th>
@@ -2107,7 +2108,7 @@ export default function DeveloperCampaignHQ() {
                 <tbody>
                   {campaigns.length === 0 ? (
                     <tr>
-                      <td colSpan={6} style={{ textAlign: 'center', padding: '36px 0', color: 'var(--text-dim)' }}>
+                      <td colSpan={7} style={{ textAlign: 'center', padding: '36px 0', color: 'var(--text-dim)' }}>
                         No campaigns launched yet. Create and broadcast your first campaign above!
                       </td>
                     </tr>
@@ -2142,47 +2143,50 @@ export default function DeveloperCampaignHQ() {
                             </button>
                           </td>
                           <td>
-                            <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', alignItems: 'flex-start' }}>
-                              {deliveredCount > 0 ? (
-                                <button
-                                  type="button"
-                                  onClick={() => {
-                                    setBreakdownCampaign(camp);
-                                    setBreakdownFilter('delivered');
-                                  }}
-                                  className="badge badge-green"
-                                  style={{ cursor: 'pointer', border: 'none', display: 'inline-flex', alignItems: 'center', gap: '4px' }}
-                                  title="Click to view delivered recipients"
-                                >
-                                  <span>✓ {deliveredCount} Delivered</span>
-                                  {totalCount > 0 && (
-                                    <span style={{ fontSize: '0.7rem', opacity: 0.85 }}>({Math.round((deliveredCount / totalCount) * 100)}%)</span>
-                                  )}
-                                </button>
-                              ) : (
-                                <span className="badge badge-secondary" style={{ opacity: 0.7 }}>
-                                  0 Delivered
-                                </span>
-                              )}
-
-                              {queuedCount > 0 && (
-                                <button
-                                  type="button"
-                                  onClick={() => {
-                                    setBreakdownCampaign(camp);
-                                    setBreakdownFilter('sent');
-                                  }}
-                                  className="badge"
-                                  style={{ background: '#e0f2fe', color: '#0369a1', border: '1px solid #bae6fd', fontWeight: 600, cursor: 'pointer', fontSize: '0.72rem', display: 'inline-flex', alignItems: 'center', gap: '4px' }}
-                                  title="Dispatched to Meta Cloud API; waiting for recipient device to connect to internet and acknowledge receipt"
-                                >
-                                  <span>⏳ {queuedCount} Queued in Meta</span>
-                                  {totalCount > 0 && (
-                                    <span style={{ fontSize: '0.68rem', opacity: 0.85 }}>({Math.round((queuedCount / totalCount) * 100)}%)</span>
-                                  )}
-                                </button>
-                              )}
-                            </div>
+                            {deliveredCount > 0 ? (
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setBreakdownCampaign(camp);
+                                  setBreakdownFilter('delivered');
+                                }}
+                                className="badge badge-green"
+                                style={{ cursor: 'pointer', border: 'none', display: 'inline-flex', alignItems: 'center', gap: '4px' }}
+                                title="Click to view delivered recipients"
+                              >
+                                <span>✓ {deliveredCount} Delivered</span>
+                                {totalCount > 0 && (
+                                  <span style={{ fontSize: '0.7rem', opacity: 0.85 }}>({Math.round((deliveredCount / totalCount) * 100)}%)</span>
+                                )}
+                              </button>
+                            ) : (
+                              <span className="badge badge-secondary" style={{ opacity: 0.7 }}>
+                                0 Delivered
+                              </span>
+                            )}
+                          </td>
+                          <td>
+                            {queuedCount > 0 ? (
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setBreakdownCampaign(camp);
+                                  setBreakdownFilter('sent');
+                                }}
+                                className="badge"
+                                style={{ background: '#e0f2fe', color: '#0369a1', border: '1px solid #bae6fd', fontWeight: 600, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '4px' }}
+                                title="Click to view queued messages in Meta (awaiting recipient device connection)"
+                              >
+                                <span>⏳ {queuedCount} Queued in Meta</span>
+                                {totalCount > 0 && (
+                                  <span style={{ fontSize: '0.68rem', opacity: 0.85 }}>({Math.round((queuedCount / totalCount) * 100)}%)</span>
+                                )}
+                              </button>
+                            ) : (
+                              <span className="badge badge-secondary" style={{ opacity: 0.7 }}>
+                                0 Queued
+                              </span>
+                            )}
                           </td>
                           <td>
                             <span className="badge badge-purple" style={{ fontWeight: 700 }}>
@@ -3811,117 +3815,126 @@ export default function DeveloperCampaignHQ() {
                     </button>
                   </div>
 
-                  {/* Delivery Funnel & Analytics Pipeline */}
+                  {/* Delivery Metrics Overview */}
                   <div style={{
                     padding: '16px 24px',
                     background: '#f8fafc',
                     borderBottom: '1px solid #e2e8f0',
                     display: 'grid',
-                    gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))',
+                    gridTemplateColumns: 'repeat(6, 1fr)',
                     gap: '12px',
                   }}>
                     {/* 1. Targeted */}
-                    <div style={{ background: '#ffffff', borderRadius: '10px', padding: '12px 14px', border: '1px solid #e2e8f0', boxShadow: '0 1px 3px rgba(0,0,0,0.03)' }}>
-                      <div style={{ fontSize: '0.72rem', color: '#64748b', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-                        1. Targeted
+                    <div style={{
+                      background: '#ffffff',
+                      borderRadius: '12px',
+                      padding: '12px 16px',
+                      border: '1px solid #e2e8f0',
+                      boxShadow: '0 1px 2px rgba(0,0,0,0.03)',
+                    }}>
+                      <div style={{ fontSize: '0.72rem', color: '#64748b', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                        Targeted
                       </div>
-                      <div style={{ fontSize: '1.35rem', fontWeight: 800, color: '#0f172a', marginTop: '2px' }}>
+                      <div style={{ fontSize: '1.4rem', fontWeight: 800, color: '#0f172a', margin: '4px 0 2px 0' }}>
                         {totalRecipients}
                       </div>
-                      <div style={{ fontSize: '0.7rem', color: '#059669', marginTop: '2px', fontWeight: 600 }}>
-                        100% Dispatched to Meta
+                      <div style={{ fontSize: '0.72rem', color: '#64748b', fontWeight: 500 }}>
+                        Total Audience
                       </div>
                     </div>
 
                     {/* 2. Queued in Meta */}
-                    <div style={{ background: '#f0f9ff', borderRadius: '10px', padding: '12px 14px', border: '1px solid #bae6fd', boxShadow: '0 1px 3px rgba(0,0,0,0.03)' }}>
-                      <div style={{ fontSize: '0.72rem', color: '#0369a1', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-                        2. Queued in Meta
+                    <div style={{
+                      background: '#f0f9ff',
+                      borderRadius: '12px',
+                      padding: '12px 16px',
+                      border: '1px solid #bae6fd',
+                      boxShadow: '0 1px 2px rgba(0,0,0,0.03)',
+                    }}>
+                      <div style={{ fontSize: '0.72rem', color: '#0369a1', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                        Queued in Meta
                       </div>
-                      <div style={{ fontSize: '1.35rem', fontWeight: 800, color: '#0284c7', marginTop: '2px' }}>
+                      <div style={{ fontSize: '1.4rem', fontWeight: 800, color: '#0284c7', margin: '4px 0 2px 0' }}>
                         {queuedRecipients}
                       </div>
-                      <div style={{ fontSize: '0.7rem', color: '#0369a1', marginTop: '2px', fontWeight: 600 }}>
-                        {queuedPercent}% • Awaiting Device
+                      <div style={{ fontSize: '0.72rem', color: '#0369a1', fontWeight: 600 }}>
+                        {queuedPercent}% in queue
                       </div>
                     </div>
 
                     {/* 3. Delivered */}
-                    <div style={{ background: '#ecfdf5', borderRadius: '10px', padding: '12px 14px', border: '1px solid #a7f3d0', boxShadow: '0 1px 3px rgba(0,0,0,0.03)' }}>
-                      <div style={{ fontSize: '0.72rem', color: '#047857', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-                        3. Delivered to Phone
+                    <div style={{
+                      background: '#ecfdf5',
+                      borderRadius: '12px',
+                      padding: '12px 16px',
+                      border: '1px solid #a7f3d0',
+                      boxShadow: '0 1px 2px rgba(0,0,0,0.03)',
+                    }}>
+                      <div style={{ fontSize: '0.72rem', color: '#047857', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                        Delivered
                       </div>
-                      <div style={{ fontSize: '1.35rem', fontWeight: 800, color: '#059669', marginTop: '2px' }}>
+                      <div style={{ fontSize: '1.4rem', fontWeight: 800, color: '#059669', margin: '4px 0 2px 0' }}>
                         {deliveredRecipients}
                       </div>
-                      <div style={{ fontSize: '0.7rem', color: '#047857', marginTop: '2px', fontWeight: 600 }}>
-                        {deliveredPercent}% • Two grey ticks ✓✓
+                      <div style={{ fontSize: '0.72rem', color: '#047857', fontWeight: 600 }}>
+                        {deliveredPercent}% reached
                       </div>
                     </div>
 
                     {/* 4. Read */}
-                    <div style={{ background: '#eff6ff', borderRadius: '10px', padding: '12px 14px', border: '1px solid #bfdbfe', boxShadow: '0 1px 3px rgba(0,0,0,0.03)' }}>
-                      <div style={{ fontSize: '0.72rem', color: '#1d4ed8', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-                        4. Opened & Read
+                    <div style={{
+                      background: '#eff6ff',
+                      borderRadius: '12px',
+                      padding: '12px 16px',
+                      border: '1px solid #bfdbfe',
+                      boxShadow: '0 1px 2px rgba(0,0,0,0.03)',
+                    }}>
+                      <div style={{ fontSize: '0.72rem', color: '#1d4ed8', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                        Opened & Read
                       </div>
-                      <div style={{ fontSize: '1.35rem', fontWeight: 800, color: '#2563eb', marginTop: '2px' }}>
+                      <div style={{ fontSize: '1.4rem', fontWeight: 800, color: '#2563eb', margin: '4px 0 2px 0' }}>
                         {readRecipients}
                       </div>
-                      <div style={{ fontSize: '0.7rem', color: '#1d4ed8', marginTop: '2px', fontWeight: 600 }}>
-                        {readPercent}% • Two blue ticks ✓✓
+                      <div style={{ fontSize: '0.72rem', color: '#1d4ed8', fontWeight: 600 }}>
+                        {readPercent}% read
                       </div>
                     </div>
 
                     {/* 5. Inbound Leads */}
-                    <div style={{ background: '#f5f3ff', borderRadius: '10px', padding: '12px 14px', border: '1px solid #ddd6fe', boxShadow: '0 1px 3px rgba(0,0,0,0.03)' }}>
-                      <div style={{ fontSize: '0.72rem', color: '#6d28d9', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-                        5. Inbound Leads
+                    <div style={{
+                      background: '#f5f3ff',
+                      borderRadius: '12px',
+                      padding: '12px 16px',
+                      border: '1px solid #ddd6fe',
+                      boxShadow: '0 1px 2px rgba(0,0,0,0.03)',
+                    }}>
+                      <div style={{ fontSize: '0.72rem', color: '#6d28d9', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                        Inbound Leads
                       </div>
-                      <div style={{ fontSize: '1.35rem', fontWeight: 800, color: '#7c3aed', marginTop: '2px' }}>
+                      <div style={{ fontSize: '1.4rem', fontWeight: 800, color: '#7c3aed', margin: '4px 0 2px 0' }}>
                         {repliedRecipients}
                       </div>
-                      <div style={{ fontSize: '0.7rem', color: '#6d28d9', marginTop: '2px', fontWeight: 600 }}>
-                        {totalRecipients > 0 ? ((repliedRecipients / totalRecipients) * 100).toFixed(1) : 0}% • Button / Reply
+                      <div style={{ fontSize: '0.72rem', color: '#6d28d9', fontWeight: 600 }}>
+                        {repliedRecipients} {repliedRecipients === 1 ? 'lead' : 'leads'}
                       </div>
                     </div>
 
                     {/* 6. Failed */}
-                    <div style={{ background: failedRecipients > 0 ? '#fef2f2' : '#ffffff', borderRadius: '10px', padding: '12px 14px', border: `1px solid ${failedRecipients > 0 ? '#fecaca' : '#e2e8f0'}`, boxShadow: '0 1px 3px rgba(0,0,0,0.03)' }}>
-                      <div style={{ fontSize: '0.72rem', color: failedRecipients > 0 ? '#b91c1c' : '#64748b', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-                        Failed / Bounced
+                    <div style={{
+                      background: failedRecipients > 0 ? '#fef2f2' : '#ffffff',
+                      borderRadius: '12px',
+                      padding: '12px 16px',
+                      border: `1px solid ${failedRecipients > 0 ? '#fecaca' : '#e2e8f0'}`,
+                      boxShadow: '0 1px 2px rgba(0,0,0,0.03)',
+                    }}>
+                      <div style={{ fontSize: '0.72rem', color: failedRecipients > 0 ? '#b91c1c' : '#64748b', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                        Failed
                       </div>
-                      <div style={{ fontSize: '1.35rem', fontWeight: 800, color: failedRecipients > 0 ? '#dc2626' : '#64748b', marginTop: '2px' }}>
+                      <div style={{ fontSize: '1.4rem', fontWeight: 800, color: failedRecipients > 0 ? '#dc2626' : '#64748b', margin: '4px 0 2px 0' }}>
                         {failedRecipients}
                       </div>
-                      <div style={{ fontSize: '0.7rem', color: failedRecipients > 0 ? '#b91c1c' : '#64748b', marginTop: '2px', fontWeight: 600 }}>
-                        {failedRecipients > 0 ? `${Math.round((failedRecipients / totalRecipients) * 100)}% delivery errors` : '0 Errors'}
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Informative Lifecycle Explanation Alert Banner */}
-                  <div style={{
-                    margin: '12px 24px 0 24px',
-                    padding: '12px 16px',
-                    background: '#f0f9ff',
-                    border: '1px solid #bae6fd',
-                    borderRadius: '8px',
-                    fontSize: '0.78rem',
-                    color: '#0369a1',
-                    display: 'flex',
-                    alignItems: 'flex-start',
-                    gap: '12px',
-                    lineHeight: 1.5,
-                  }}>
-                    <Info size={18} style={{ color: '#0284c7', flexShrink: 0, marginTop: '2px' }} />
-                    <div>
-                      <div style={{ fontWeight: 700, color: '#0c4a6e', fontSize: '0.82rem' }}>
-                        Why is there a difference between Targeted ({totalRecipients}) and Delivered ({deliveredRecipients})?
-                      </div>
-                      <div style={{ color: '#334155', marginTop: '3px' }}>
-                        • <strong>All {totalRecipients} messages were successfully sent & accepted by Meta Cloud API</strong> (wamid IDs assigned).<br />
-                        • <strong>{deliveredRecipients} messages</strong> have physically reached recipient devices ({readRecipients} have already opened/read them).<br />
-                        • <strong>{queuedRecipients} messages are currently &quot;Queued in Meta&quot;</strong>: They are <strong>NOT stuck</strong> in our system. Meta is actively attempting to deliver them and is waiting for the recipient&apos;s phone to turn on, connect to mobile data/Wi-Fi, or open WhatsApp. Meta holds queued messages for up to 30 days and delivers them the instant the device comes online.
+                      <div style={{ fontSize: '0.72rem', color: failedRecipients > 0 ? '#b91c1c' : '#94a3b8', fontWeight: 500 }}>
+                        {failedRecipients > 0 ? `${failedRecipients} errors` : '0 errors'}
                       </div>
                     </div>
                   </div>
