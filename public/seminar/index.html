@@ -1,0 +1,789 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>A5 Automation • Seminar & Workshop Registration</title>
+  <link rel="icon" href="/wp-content/uploads/2026/04/A5A-Automation-Industrial-Training-logo.png" />
+  <style>
+    :root {
+      --primary: #059669;
+      --primary-hover: #047857;
+      --primary-light: #ecfdf5;
+      --slate-50: #f8fafc;
+      --slate-100: #f1f5f9;
+      --slate-200: #e2e8f0;
+      --slate-300: #cbd5e1;
+      --slate-600: #475569;
+      --slate-700: #334155;
+      --slate-800: #1e293b;
+      --slate-900: #0f172a;
+      --wa-green: #25D366;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    }
+
+    body {
+      background: linear-gradient(180deg, #f8fafc 0%, #f1f5f9 100%);
+      min-height: 100vh;
+      padding: 20px 14px 60px;
+      color: var(--slate-900);
+      -webkit-font-smoothing: antialiased;
+    }
+
+    .container {
+      max-width: 620px;
+      margin: 0 auto;
+    }
+
+    .header-card {
+      background: #ffffff;
+      border-radius: 22px;
+      padding: 28px 22px;
+      text-align: center;
+      border: 1px solid var(--slate-200);
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.03);
+      margin-bottom: 18px;
+    }
+
+    .badge-seminar {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 4px 12px;
+      background: var(--primary-light);
+      color: var(--primary-hover);
+      font-size: 0.76rem;
+      font-weight: 800;
+      border-radius: 999px;
+      letter-spacing: 0.04em;
+      margin-bottom: 12px;
+    }
+
+    h1 {
+      font-size: 1.55rem;
+      font-weight: 850;
+      letter-spacing: -0.02em;
+      color: var(--slate-900);
+      margin-bottom: 8px;
+      line-height: 1.25;
+    }
+
+    .header-desc {
+      font-size: 0.88rem;
+      color: var(--slate-600);
+      line-height: 1.5;
+    }
+
+    .highlights-row {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 8px;
+      margin-top: 20px;
+      padding-top: 16px;
+      border-top: 1px solid var(--slate-100);
+    }
+
+    .highlight-item {
+      text-align: center;
+    }
+    .highlight-item:nth-child(2) {
+      border-left: 1px solid var(--slate-200);
+      border-right: 1px solid var(--slate-200);
+    }
+    .highlight-title {
+      font-size: 0.8rem;
+      font-weight: 800;
+      color: var(--primary);
+    }
+    .highlight-sub {
+      font-size: 0.68rem;
+      color: var(--slate-600);
+      margin-top: 2px;
+    }
+
+    .form-card {
+      background: #ffffff;
+      border-radius: 22px;
+      padding: 28px 22px;
+      border: 1px solid var(--slate-200);
+      box-shadow: 0 8px 30px rgba(0, 0, 0, 0.04);
+    }
+
+    .form-group {
+      margin-bottom: 18px;
+    }
+
+    .form-label {
+      display: block;
+      font-size: 0.82rem;
+      font-weight: 700;
+      color: var(--slate-700);
+      margin-bottom: 6px;
+    }
+
+    .form-label span.req {
+      color: #ef4444;
+      margin-left: 2px;
+    }
+
+    .input-wrap {
+      position: relative;
+    }
+
+    .input-prefix {
+      position: absolute;
+      left: 12px;
+      top: 50%;
+      transform: translateY(-50%);
+      font-size: 0.88rem;
+      font-weight: 700;
+      color: var(--slate-600);
+      pointer-events: none;
+    }
+
+    input[type="text"],
+    input[type="email"],
+    input[type="tel"],
+    select {
+      width: 100%;
+      height: 44px;
+      border: 1.5px solid var(--slate-200);
+      border-radius: 12px;
+      padding: 0 14px;
+      font-size: 0.92rem;
+      color: var(--slate-900);
+      background: #ffffff;
+      outline: none;
+      transition: all 0.2s ease;
+    }
+
+    input[type="tel"].has-prefix {
+      padding-left: 48px;
+    }
+
+    input:focus,
+    select:focus {
+      border-color: var(--primary);
+      box-shadow: 0 0 0 3px rgba(5, 150, 105, 0.12);
+    }
+
+    .pills-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 8px;
+    }
+    @media (min-width: 480px) {
+      .pills-grid-5 {
+        grid-template-columns: repeat(3, 1fr);
+      }
+    }
+
+    .pill-btn {
+      padding: 10px 12px;
+      border: 1.5px solid var(--slate-200);
+      border-radius: 12px;
+      background: #ffffff;
+      font-size: 0.82rem;
+      font-weight: 700;
+      color: var(--slate-700);
+      cursor: pointer;
+      text-align: center;
+      transition: all 0.15s ease;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+    }
+
+    .pill-btn:hover {
+      border-color: var(--slate-300);
+      background: var(--slate-50);
+    }
+
+    .pill-btn.active {
+      border-color: var(--primary);
+      background: var(--primary-light);
+      color: var(--primary-hover);
+      box-shadow: 0 2px 8px rgba(5, 150, 105, 0.15);
+    }
+
+    .career-conditional-card {
+      background: #f8fafc;
+      border: 1.5px dashed #0284c7;
+      border-radius: 14px;
+      padding: 18px 16px;
+      margin-top: 14px;
+    }
+
+    .career-choice-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+      margin-bottom: 14px;
+    }
+
+    .career-card {
+      padding: 12px 14px;
+      border: 1.5px solid var(--slate-200);
+      border-radius: 12px;
+      background: #ffffff;
+      cursor: pointer;
+      text-align: left;
+      transition: all 0.2s ease;
+    }
+
+    .career-card.active {
+      border-color: #0284c7;
+      background: #f0f9ff;
+      box-shadow: 0 2px 10px rgba(2, 132, 199, 0.15);
+    }
+
+    .career-card-title {
+      font-size: 0.84rem;
+      font-weight: 800;
+      color: var(--slate-800);
+    }
+    .career-card.active .career-card-title {
+      color: #0284c7;
+    }
+    .career-card-desc {
+      font-size: 0.72rem;
+      color: var(--slate-600);
+      margin-top: 2px;
+    }
+
+    .btn-submit {
+      width: 100%;
+      height: 48px;
+      background: var(--primary);
+      color: #ffffff;
+      border: none;
+      border-radius: 14px;
+      font-size: 0.96rem;
+      font-weight: 800;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      box-shadow: 0 4px 14px rgba(5, 150, 105, 0.35);
+      transition: all 0.2s ease;
+      margin-top: 10px;
+    }
+
+    .btn-submit:hover:not(:disabled) {
+      background: var(--primary-hover);
+      transform: translateY(-1px);
+    }
+
+    .btn-submit:disabled {
+      opacity: 0.65;
+      cursor: not-allowed;
+    }
+
+    .error-box {
+      background: #fef2f2;
+      border: 1px solid #fecaca;
+      color: #dc2626;
+      padding: 10px 14px;
+      border-radius: 10px;
+      font-size: 0.82rem;
+      font-weight: 600;
+      margin-bottom: 16px;
+      display: none;
+    }
+
+    /* Confirmation Modal / Screen */
+    .confirm-screen {
+      display: none;
+      background: #ffffff;
+      border-radius: 24px;
+      padding: 40px 24px;
+      text-align: center;
+      border: 1px solid #86efac;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.06);
+    }
+
+    .confirm-icon {
+      width: 72px;
+      height: 72px;
+      background: #dcfce7;
+      color: #16a34a;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin: 0 auto 16px;
+      font-size: 36px;
+    }
+
+    .confirm-badge {
+      display: inline-block;
+      padding: 4px 14px;
+      background: #dcfce7;
+      color: #15803d;
+      border-radius: 20px;
+      font-size: 0.78rem;
+      font-weight: 800;
+      letter-spacing: 0.05em;
+      margin-bottom: 10px;
+    }
+
+    .confirm-title {
+      font-size: 1.5rem;
+      font-weight: 900;
+      color: var(--slate-900);
+      margin-bottom: 8px;
+    }
+
+    .confirm-summary-box {
+      background: var(--slate-50);
+      border: 1px solid var(--slate-200);
+      border-radius: 14px;
+      padding: 14px 16px;
+      text-align: left;
+      font-size: 0.84rem;
+      margin: 20px 0;
+    }
+
+    .confirm-row {
+      display: flex;
+      justify-content: space-between;
+      padding: 6px 0;
+      border-bottom: 1px solid var(--slate-200);
+    }
+    .confirm-row:last-child {
+      border-bottom: none;
+    }
+    .confirm-label {
+      color: var(--slate-600);
+    }
+    .confirm-val {
+      font-weight: 700;
+      color: var(--slate-900);
+    }
+
+    .btn-wa-connect {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      width: 100%;
+      height: 48px;
+      border-radius: 14px;
+      background: var(--wa-green);
+      color: #ffffff;
+      font-weight: 800;
+      font-size: 0.94rem;
+      text-decoration: none;
+      box-shadow: 0 4px 14px rgba(37, 211, 102, 0.35);
+      transition: all 0.2s ease;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    
+    <!-- Top Branding Header -->
+    <div class="header-card" id="headerCard">
+      <div class="badge-seminar">
+        <span>🏛️ A5 AUTOMATION • INSTITUTIONAL SEMINAR SERIES</span>
+      </div>
+      <h1>Seminar &amp; Workshop Registration</h1>
+      <p class="header-desc">
+        Confirm your attendance to receive verified participation notes and access core engineering training pathways.
+      </p>
+
+      <div class="highlights-row">
+        <div class="highlight-item">
+          <div class="highlight-title">100% Practical</div>
+          <div class="highlight-sub">Live Hardware Demo</div>
+        </div>
+        <div class="highlight-item">
+          <div class="highlight-title" style="color: #0284c7;">Core Placements</div>
+          <div class="highlight-sub">Industry Ready Track</div>
+        </div>
+        <div class="highlight-item">
+          <div class="highlight-title" style="color: #7c3aed;">Govt / ISO</div>
+          <div class="highlight-sub">Salem Campus</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Registration Form Card -->
+    <div class="form-card" id="formCard">
+      <div id="errorBox" class="error-box"></div>
+
+      <form id="seminarForm" onsubmit="handleFormSubmit(event)">
+        <!-- Name -->
+        <div class="form-group">
+          <label class="form-label" for="inpName">Full Name <span class="req">*</span></label>
+          <input type="text" id="inpName" placeholder="e.g. Rahul Sharma" required />
+        </div>
+
+        <!-- Phone -->
+        <div class="form-group">
+          <label class="form-label" for="inpPhone">WhatsApp Mobile Number <span class="req">*</span></label>
+          <div class="input-wrap">
+            <span class="input-prefix">+91</span>
+            <input type="tel" id="inpPhone" class="has-prefix" placeholder="98765 43210" maxlength="10" required />
+          </div>
+        </div>
+
+        <!-- Email -->
+        <div class="form-group">
+          <label class="form-label" for="inpEmail">Email Address <span class="req">*</span></label>
+          <input type="email" id="inpEmail" placeholder="rahul@example.com" required />
+        </div>
+
+        <!-- College Select -->
+        <div class="form-group">
+          <label class="form-label" for="selCollege">College / Institution Name <span class="req">*</span></label>
+          <select id="selCollege" onchange="handleCollegeChange()" required>
+            <option value="Government College of Engineering, Salem">Government College of Engineering, Salem</option>
+            <option value="Sona College of Technology, Salem">Sona College of Technology, Salem</option>
+            <option value="Knowledge Institute of Technology (KIOT), Salem">Knowledge Institute of Technology (KIOT), Salem</option>
+            <option value="Sri Krishna College of Technology (SKCT), Coimbatore">Sri Krishna College of Technology (SKCT), Coimbatore</option>
+            <option value="Sri Krishna College of Engineering & Technology (SKCET)">Sri Krishna College of Engineering &amp; Technology (SKCET)</option>
+            <option value="PSG College of Technology, Coimbatore">PSG College of Technology, Coimbatore</option>
+            <option value="Coimbatore Institute of Technology (CIT)">Coimbatore Institute of Technology (CIT)</option>
+            <option value="Bannari Amman Institute of Technology (BIT)">Bannari Amman Institute of Technology (BIT)</option>
+            <option value="Kongu Engineering College, Perundurai">Kongu Engineering College, Perundurai</option>
+            <option value="KSR College of Engineering, Tiruchengode">KSR College of Engineering, Tiruchengode</option>
+            <option value="KSR Institute for Engineering and Technology">KSR Institute for Engineering and Technology</option>
+            <option value="Paavai Engineering College, Namakkal">Paavai Engineering College, Namakkal</option>
+            <option value="Muthayammal Engineering College, Rasipuram">Muthayammal Engineering College, Rasipuram</option>
+            <option value="Mahendra Engineering College, Mallasamudram">Mahendra Engineering College, Mallasamudram</option>
+            <option value="Excel Engineering College, Komarapalayam">Excel Engineering College, Komarapalayam</option>
+            <option value="Nandha Engineering College, Erode">Nandha Engineering College, Erode</option>
+            <option value="Alagappa Chettiar Govt College of Engineering (ACGCET)">Alagappa Chettiar Govt College of Engineering (ACGCET)</option>
+            <option value="Thiagarajar College of Engineering (TCE), Madurai">Thiagarajar College of Engineering (TCE), Madurai</option>
+            <option value="Other">Other College / Institution (Type Name Below)</option>
+          </select>
+        </div>
+
+        <!-- College Other input -->
+        <div class="form-group" id="groupCollegeOther" style="display: none;">
+          <label class="form-label" for="inpCollegeOther">Type Your College / Institution Name <span class="req">*</span></label>
+          <input type="text" id="inpCollegeOther" placeholder="Enter full college name" />
+        </div>
+
+        <!-- Department -->
+        <div class="form-group">
+          <label class="form-label" for="selDept">Branch / Department <span class="req">*</span></label>
+          <select id="selDept" onchange="handleDeptChange()" required>
+            <option value="Electrical & Electronics Engineering (EEE)">Electrical &amp; Electronics Engineering (EEE)</option>
+            <option value="Electronics & Communication Engineering (ECE)">Electronics &amp; Communication Engineering (ECE)</option>
+            <option value="Mechanical Engineering">Mechanical Engineering</option>
+            <option value="Mechatronics Engineering">Mechatronics Engineering</option>
+            <option value="Robotics & Automation">Robotics &amp; Automation</option>
+            <option value="Electronics & Instrumentation (E&I)">Electronics &amp; Instrumentation (E&amp;I)</option>
+            <option value="Computer Science / IT / AI">Computer Science / IT / AI</option>
+            <option value="Automobile Engineering">Automobile Engineering</option>
+            <option value="Civil Engineering">Civil Engineering</option>
+            <option value="Other">Other Branch</option>
+          </select>
+        </div>
+
+        <!-- Department Other input -->
+        <div class="form-group" id="groupDeptOther" style="display: none;">
+          <label class="form-label" for="inpDeptOther">Type Your Branch / Department <span class="req">*</span></label>
+          <input type="text" id="inpDeptOther" placeholder="e.g. Biomedical / Chemical" />
+        </div>
+
+        <!-- Year of Study Pills -->
+        <div class="form-group">
+          <label class="form-label">Current Academic Year / Status <span class="req">*</span></label>
+          <div class="pills-grid pills-grid-5">
+            <button type="button" class="pill-btn" onclick="selectYear('1st Year')">1st Year</button>
+            <button type="button" class="pill-btn" onclick="selectYear('2nd Year')">2nd Year</button>
+            <button type="button" class="pill-btn" onclick="selectYear('3rd Year')">3rd Year</button>
+            <button type="button" class="pill-btn active" onclick="selectYear('Final Year (4th Year)')">Final Year</button>
+            <button type="button" class="pill-btn" onclick="selectYear('Passed Out')">Passed Out</button>
+          </div>
+        </div>
+
+        <!-- Dynamic Conditional Card for Passed Out -->
+        <div id="passedOutBox" class="career-conditional-card" style="display: none;">
+          <div style="font-size: 0.82rem; font-weight: 800; color: #0369a1; margin-bottom: 8px;">
+            🎓 PASSED OUT CAREER STATUS
+          </div>
+          <div class="career-choice-grid">
+            <div id="cardSeeking" class="career-card active" onclick="selectEmployment('seeking_job')">
+              <div class="career-card-title">💼 Seeking Core Job</div>
+              <div class="career-card-desc">Looking for Automation / Core placement</div>
+            </div>
+            <div id="cardWorking" class="career-card" onclick="selectEmployment('working')">
+              <div class="career-card-title">🏢 Currently Working</div>
+              <div class="career-card-desc">Upskilling for promotion / switch</div>
+            </div>
+          </div>
+
+          <!-- Working details -->
+          <div id="workingDetailsGroup" style="display: none;">
+            <div class="form-group" style="margin-bottom: 12px;">
+              <label class="form-label" for="inpCompany">Company / Employer Name <span class="req">*</span></label>
+              <input type="text" id="inpCompany" placeholder="e.g. Bosch, Tata Motors, L&T" />
+            </div>
+            <div class="form-group" style="margin-bottom: 4px;">
+              <label class="form-label" for="inpDesignation">Current Designation / Role</label>
+              <input type="text" id="inpDesignation" placeholder="e.g. GET, Junior Engineer" />
+            </div>
+          </div>
+        </div>
+
+        <!-- City -->
+        <div class="form-group" style="margin-top: 16px;">
+          <label class="form-label" for="inpCity">Native City / District <span class="req">*</span></label>
+          <input type="text" id="inpCity" placeholder="e.g. Salem, Coimbatore, Erode, Chennai" required />
+        </div>
+
+        <!-- Submit Button -->
+        <button type="submit" id="btnSubmit" class="btn-submit">
+          <span>Confirm Seminar Registration</span>
+          <span>→</span>
+        </button>
+      </form>
+    </div>
+
+    <!-- Confirmation Screen -->
+    <div class="confirm-screen" id="confirmScreen">
+      <div class="confirm-icon">✓</div>
+      <div class="confirm-badge">SEMINAR REGISTRATION CONFIRMED</div>
+      <h2 class="confirm-title" id="confirmTitle">You're All Set! 🎉</h2>
+      <p style="color: var(--slate-600); font-size: 0.92rem; line-height: 1.5; margin-bottom: 20px;">
+        Your attendance registration is saved in the A5 Automation portal. Presentation slides and training resources will be shared on your registered number.
+      </p>
+
+      <div class="confirm-summary-box">
+        <div class="confirm-row">
+          <span class="confirm-label">Institution:</span>
+          <span class="confirm-val" id="resCollege">-</span>
+        </div>
+        <div class="confirm-row">
+          <span class="confirm-label">Department:</span>
+          <span class="confirm-val" id="resDept">-</span>
+        </div>
+        <div class="confirm-row">
+          <span class="confirm-label">Status:</span>
+          <span class="confirm-val" style="color: #16a34a;" id="resStatus">Registered Attendee</span>
+        </div>
+      </div>
+
+      <a href="https://wa.me/919025489166?text=Hi%20A5%20Automation,%20I%20have%20registered%20for%20the%20college%20seminar." target="_blank" class="btn-wa-connect">
+        <span>💬 Connect with A5 Automation on WhatsApp</span>
+      </a>
+    </div>
+
+  </div>
+
+  <script>
+    const SUPABASE_URL = "https://mffspcgphpygesrfntaj.supabase.co";
+    const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1mZnNwY2dwaHB5Z2VzcmZudGFqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTMxNzIwNzUsImV4cCI6MjEwODc0ODA3NX0.no0fYBzCXwQ1bkFWvukM_5NBZao7pzR6BtGFM0-C9e8";
+
+    let selectedYear = "Final Year (4th Year)";
+    let selectedEmployment = "seeking_job";
+
+    function selectYear(yr) {
+      selectedYear = yr;
+      document.querySelectorAll(".pill-btn").forEach(btn => {
+        if (btn.innerText.includes(yr.split(" ")[0])) {
+          btn.classList.add("active");
+        } else {
+          btn.classList.remove("active");
+        }
+      });
+
+      const passedOutBox = document.getElementById("passedOutBox");
+      if (yr === "Passed Out") {
+        passedOutBox.style.display = "block";
+      } else {
+        passedOutBox.style.display = "none";
+      }
+    }
+
+    function selectEmployment(type) {
+      selectedEmployment = type;
+      const cardSeeking = document.getElementById("cardSeeking");
+      const cardWorking = document.getElementById("cardWorking");
+      const workingDetailsGroup = document.getElementById("workingDetailsGroup");
+
+      if (type === "working") {
+        cardWorking.classList.add("active");
+        cardSeeking.classList.remove("active");
+        workingDetailsGroup.style.display = "block";
+      } else {
+        cardSeeking.classList.add("active");
+        cardWorking.classList.remove("active");
+        workingDetailsGroup.style.display = "none";
+      }
+    }
+
+    function handleCollegeChange() {
+      const sel = document.getElementById("selCollege").value;
+      const groupOther = document.getElementById("groupCollegeOther");
+      groupOther.style.display = sel === "Other" ? "block" : "none";
+    }
+
+    function handleDeptChange() {
+      const sel = document.getElementById("selDept").value;
+      const groupOther = document.getElementById("groupDeptOther");
+      groupOther.style.display = sel === "Other" ? "block" : "none";
+    }
+
+    // Prefill college from URL ?college=...
+    window.addEventListener("DOMContentLoaded", () => {
+      const params = new URLSearchParams(window.location.search);
+      const col = params.get("college");
+      if (col) {
+        const sel = document.getElementById("selCollege");
+        let found = false;
+        for (let i = 0; i < sel.options.length; i++) {
+          if (sel.options[i].value.toLowerCase().includes(col.toLowerCase())) {
+            sel.selectedIndex = i;
+            found = true;
+            break;
+          }
+        }
+        if (!found) {
+          sel.value = "Other";
+          document.getElementById("groupCollegeOther").style.display = "block";
+          document.getElementById("inpCollegeOther").value = col;
+        }
+      }
+    });
+
+    async function handleFormSubmit(e) {
+      e.preventDefault();
+      const errBox = document.getElementById("errorBox");
+      errBox.style.display = "none";
+
+      const name = document.getElementById("inpName").value.trim();
+      const phoneInput = document.getElementById("inpPhone").value.replace(/[^0-9]/g, "");
+      const email = document.getElementById("inpEmail").value.trim().toLowerCase();
+      const city = document.getElementById("inpCity").value.trim();
+
+      if (phoneInput.length !== 10) {
+        showError("Please enter a valid 10-digit WhatsApp phone number.");
+        return;
+      }
+
+      let resolvedCollege = document.getElementById("selCollege").value;
+      if (resolvedCollege === "Other") {
+        resolvedCollege = document.getElementById("inpCollegeOther").value.trim();
+        if (!resolvedCollege) {
+          showError("Please enter your College or Institution name.");
+          return;
+        }
+      }
+
+      let resolvedDept = document.getElementById("selDept").value;
+      if (resolvedDept === "Other") {
+        resolvedDept = document.getElementById("inpDeptOther").value.trim();
+        if (!resolvedDept) {
+          showError("Please specify your Department / Branch.");
+          return;
+        }
+      }
+
+      const isPassed = selectedYear === "Passed Out";
+      const company = isPassed && selectedEmployment === "working" ? document.getElementById("inpCompany").value.trim() : "";
+      const designation = isPassed && selectedEmployment === "working" ? document.getElementById("inpDesignation").value.trim() : "";
+
+      if (isPassed && selectedEmployment === "working" && !company) {
+        showError("Please provide your Company / Employer Name.");
+        return;
+      }
+
+      let careerSummary = "Student Participant";
+      if (isPassed) {
+        if (selectedEmployment === "working") {
+          careerSummary = "Working: " + company + (designation ? " (" + designation + ")" : "");
+        } else {
+          careerSummary = "Passed Out • Seeking Core Job Opportunities";
+        }
+      }
+
+      const submitBtn = document.getElementById("btnSubmit");
+      submitBtn.disabled = true;
+      submitBtn.innerText = "Recording Registration...";
+
+      const leadId = "seminar-" + Date.now();
+      const payload = {
+        id: leadId,
+        name: name,
+        email: email,
+        phone: "+91" + phoneInput,
+        college_name: resolvedCollege,
+        department: resolvedDept,
+        year_of_study: selectedYear,
+        course_interest: careerSummary,
+        city: city,
+        source: "seminar",
+        status: "new",
+        notes: [
+          {
+            id: "sn-" + Date.now(),
+            author: "Seminar Registration System",
+            createdAt: new Date().toISOString(),
+            text: "Seminar Registration. College: " + resolvedCollege + " | Dept: " + resolvedDept + " | Year: " + selectedYear + ". " + careerSummary,
+            metadata: {
+              employmentStatus: isPassed ? selectedEmployment : "student",
+              companyName: company || null,
+              designation: designation || null
+            }
+          }
+        ],
+        updated_at: new Date().toISOString()
+      };
+
+      try {
+        const response = await fetch(SUPABASE_URL + "/rest/v1/form_leads", {
+          method: "POST",
+          headers: {
+            "apikey": SUPABASE_ANON_KEY,
+            "Authorization": "Bearer " + SUPABASE_ANON_KEY,
+            "Content-Type": "application/json",
+            "Prefer": "resolution=merge-duplicates"
+          },
+          body: JSON.stringify(payload)
+        });
+
+        if (!response.ok) {
+          throw new Error("HTTP error " + response.status);
+        }
+
+        // Show confirmation
+        document.getElementById("formCard").style.display = "none";
+        document.getElementById("headerCard").style.display = "none";
+        document.getElementById("confirmTitle").innerText = "You're All Set, " + name.split(" ")[0] + "! 🎉";
+        document.getElementById("resCollege").innerText = resolvedCollege;
+        document.getElementById("resDept").innerText = resolvedDept;
+        document.getElementById("resStatus").innerText = isPassed ? (selectedEmployment === "working" ? "Working Professional" : "Core Job Seeker") : "Student Attendee";
+        document.getElementById("confirmScreen").style.display = "block";
+        window.scrollTo({ top: 0, behavior: "smooth" });
+
+      } catch (err) {
+        console.error("Submission error:", err);
+        showError("Could not submit registration. Please check your internet connection and try again.");
+        submitBtn.disabled = false;
+        submitBtn.innerText = "Confirm Seminar Registration →";
+      }
+    }
+
+    function showError(msg) {
+      const errBox = document.getElementById("errorBox");
+      errBox.innerText = msg;
+      errBox.style.display = "block";
+      errBox.scrollIntoView({ behavior: "smooth", block: "center" });
+    }
+  </script>
+</body>
+</html>
+
